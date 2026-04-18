@@ -93,6 +93,8 @@
             <button id="startBtn" class="menu-btn">開始遊戲</button>
             <button id="toShopBtn" class="menu-btn shop-btn">軍火庫 (商店&升級)</button>
             <button id="clearSaveBtn" class="menu-btn danger-btn">清除存檔</button>
+            <button id="exportSaveBtn" class="menu-btn secondary-btn" style="font-size: 16px; padding: 8px;">📤 匯出存檔代碼</button>
+            <button id="importSaveBtn" class="menu-btn secondary-btn" style="font-size: 16px; padding: 8px;">📥 匯入存檔代碼</button>
         </div>
     </div>
 
@@ -234,7 +236,7 @@ const UPGRADE_POOL = [
     { id: 'w_shotgun', name: '散彈：密集彈雨', desc: '散彈槍發射彈丸數量 +2', type: 'shotgun', action: () => { sessionStats.weaponMods.shotgun.extraBullets += 2; } }
 ];
 
-// --- 存檔讀取系統 ---
+// --- 存檔讀取與存檔系統 ---
 const SAVE_KEY = 'towerDefenseSave';
 function loadGameData() {
     const saved = localStorage.getItem(SAVE_KEY);
@@ -262,6 +264,11 @@ function clearGameData() {
     }
 }
 loadGameData();
+
+// --- 離開網頁時自動存檔 ---
+window.addEventListener('beforeunload', () => {
+    saveGameData();
+});
 
 window.addEventListener('mousemove', (e) => {
     mouseX = e.clientX;
@@ -364,14 +371,52 @@ function initGame() {
     updateUI();
 }
 
+// --- 按鈕事件綁定 (含強制存檔) ---
 document.getElementById('startBtn').addEventListener('click', () => { state = 'PLAYING'; showMenu('playing'); initGame(); animate(); });
 document.getElementById('toShopBtn').addEventListener('click', () => { state = 'SHOP'; showMenu('shop'); updateShopUI(); updateUI(); });
 document.getElementById('backToHomeFromShop').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
-document.getElementById('pauseBtn').addEventListener('click', () => { state = 'PAUSED'; showMenu('pause'); });
+
+// 暫停與返回主頁時強制存檔
+document.getElementById('pauseBtn').addEventListener('click', () => { 
+    state = 'PAUSED'; 
+    saveGameData(); 
+    showMenu('pause'); 
+});
+document.getElementById('backToHomeFromPause').addEventListener('click', () => { 
+    state = 'MENU'; 
+    saveGameData(); 
+    showMenu('main'); 
+});
+
 document.getElementById('resumeBtn').addEventListener('click', () => { state = 'PLAYING'; showMenu('playing'); animate(); });
-document.getElementById('backToHomeFromPause').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
 document.getElementById('restartBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
 document.getElementById('clearSaveBtn').addEventListener('click', clearGameData);
+
+// --- 匯出存檔 ---
+document.getElementById('exportSaveBtn').addEventListener('click', () => {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+        prompt("請複製以下這串代碼，這就是你的存檔：", btoa(encodeURIComponent(saved)));
+    } else {
+        alert("目前沒有存檔可以匯出喔！");
+    }
+});
+
+// --- 匯入存檔 ---
+document.getElementById('importSaveBtn').addEventListener('click', () => {
+    const inputData = prompt("請貼上你的存檔代碼：");
+    if (inputData) {
+        try {
+            const decodedData = decodeURIComponent(atob(inputData));
+            JSON.parse(decodedData); 
+            localStorage.setItem(SAVE_KEY, decodedData);
+            alert("存檔匯入成功！遊戲將重新載入。");
+            location.reload();
+        } catch (e) {
+            alert("匯入失敗！存檔代碼格式錯誤或已損毀。");
+        }
+    }
+});
 
 // 觸發升級與顯示選單
 function triggerLevelUp() {
@@ -379,10 +424,9 @@ function triggerLevelUp() {
     showMenu('levelup');
     updateUI();
 
-    // 【修改點 2】只抽出「全域強化」或是「當前裝備武器的專屬強化」
+    // 只抽出「全域強化」或是「當前裝備武器的專屬強化」
     let availableUpgrades = UPGRADE_POOL.filter(u => u.type === 'global' || u.type === currentWeapon);
     
-    // 隨機打亂並抽取不超過 3 個技能
     availableUpgrades.sort(() => 0.5 - Math.random());
     let choices = availableUpgrades.slice(0, 3);
     
@@ -396,7 +440,7 @@ function triggerLevelUp() {
         btn.onclick = () => {
             choice.action(); 
             
-            // 【修改點 1】經驗值門檻改為 1.5 倍
+            // 經驗值門檻 1.5 倍
             if (sessionExp >= sessionMaxExp) {
                 sessionExp -= sessionMaxExp;
                 sessionLevel++;
@@ -586,7 +630,6 @@ function animate() {
         }
     }
 
-    // 【修改點 1】經驗值門檻改為 1.5 倍
     if (shouldCheckLevelUp && sessionExp >= sessionMaxExp) {
         sessionExp -= sessionMaxExp;
         sessionLevel++;
