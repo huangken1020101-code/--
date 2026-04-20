@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>孤塔守衛戰 - 極限生存版</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         body { margin: 0; overflow: hidden; background: #222; font-family: "Microsoft JhengHei", Arial, sans-serif; cursor: crosshair; }
         canvas { display: block; background: #1a1a1a; }
@@ -79,7 +80,6 @@
         
         .hidden { display: none !important; }
 
-        /* 機率表專用樣式 */
         #probContainer { display: flex; gap: 20px; align-items: flex-start; justify-content: center; margin-bottom: 20px;}
         #probList { background: rgba(0, 0, 0, 0.7); padding: 15px; border-radius: 10px; text-align: left; border: 1px solid #444; width: 300px; }
         
@@ -129,6 +129,9 @@
             <button id="diffPlusBtn">+</button>
         </div>
 
+        <div id="buttonDiv" style="margin-bottom: 10px;"></div>
+        <div id="userInfo" style="color: #00d2ff; font-size: 18px; margin-bottom: 10px; font-weight: bold; min-height: 24px;"></div>
+
         <div class="btn-group">
             <button id="startBtn" class="menu-btn">開始出擊</button>
             <button id="toShopBtn" class="menu-btn shop-btn">軍火庫 (永久升級)</button>
@@ -146,14 +149,12 @@
     <div id="probMenu" class="overlay hidden">
         <h1 style="color: #ffc107; margin-bottom: 5px;">升級機率與圖鑑</h1>
         <p style="margin-top: 0;">點擊左側稀有度，可查看對應的升級項目</p>
-        
         <div id="probContainer">
             <div id="probList"></div>
             <div id="probDetails">
                 <div style="text-align: center; color: #888; margin-top: 180px; font-size: 18px;">請點擊左側稀有度以查看內容</div>
             </div>
         </div>
-
         <button id="closeProbBtn" class="menu-btn secondary-btn">返回主頁</button>
     </div>
 
@@ -227,6 +228,49 @@
     <canvas id="gameCanvas"></canvas>
 
 <script>
+// ====== Google 登入邏輯 ======
+// 注意：請將下方的字串替換為你申請到的 Client ID
+const GOOGLE_CLIENT_ID = '你的_CLIENT_ID_請貼在這裡.apps.googleusercontent.com';
+
+window.onload = function () {
+    // 嘗試初始化 Google 登入
+    try {
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCredentialResponse
+        });
+        
+        google.accounts.id.renderButton(
+            document.getElementById("buttonDiv"),
+            { theme: "outline", size: "large", type: "standard", text: "signin_with" } 
+        );
+    } catch (e) {
+        console.warn("無法載入 Google 登入模組 (如果是在本機檔案系統下執行屬正常現象)", e);
+    }
+};
+
+function handleCredentialResponse(response) {
+    const responsePayload = decodeJwtResponse(response.credential);
+    console.log("登入成功！Email:", responsePayload.email);
+
+    document.getElementById('userInfo').innerText = `指揮官 ${responsePayload.name}，歡迎登入！`;
+    document.getElementById('buttonDiv').style.display = 'none';
+    
+    // 將存檔綁定該帳號的 Email，這樣切換帳號就會有獨立存檔
+    SAVE_KEY = 'towerDefenseSave_WaveMod_' + responsePayload.email;
+    loadGameData(); 
+}
+
+function decodeJwtResponse(token) {
+    let base64Url = token.split('.')[1];
+    let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    let jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+}
+
+// ====== 遊戲主邏輯 ======
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const ui = document.getElementById('ui');
@@ -242,7 +286,6 @@ const menus = {
     prob: document.getElementById('probMenu') 
 };
 
-// --- 稀有度系統設定 ---
 const RARITIES = {
     '普通': { color: '#ffffff', weight: 100 },
     '常見': { color: '#4caf50', weight: 70 },
@@ -262,14 +305,16 @@ let previousState = 'MENU';
 let mouseX = canvas.width / 2;
 let mouseY = canvas.height / 2;
 
-// --- 遊戲永久存檔資料 ---
+// 存檔預設鍵值 (登入後會被覆蓋)
+let SAVE_KEY = 'towerDefenseSave_WaveMod_Guest';
+
+// 遊戲永久資料
 let gold = 0; 
 let unlockedWeapons = ['pistol']; 
 let currentWeapon = 'pistol';     
 let globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1 };
 let upgradeCosts = { fireRate: 50, damage: 100 }; 
 let maxDifficultyUnlocked = 1;
-
 let selectedDifficulty = 1;
 
 const WEAPONS = {
@@ -278,7 +323,7 @@ const WEAPONS = {
     shotgun: { cost: 3000, name: '戰術散彈槍', fireRate: 60, damage: 1.2, bullets: 5, spread: 0.5, color: '#ff4444' }
 };
 
-// --- 單場遊戲狀態 (局內) ---
+// 局內資料
 let currentWave = 1;
 let isEndless = false;
 let maxHp = 10;
@@ -292,55 +337,49 @@ const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25, color: '
 
 let enemiesToSpawn = [];
 let waveSpawnInterval = 60; 
-
 let sessionExp = 0;
 let sessionLevel = 1;
 let sessionMaxExp = 10;
 let sessionStats = {}; 
 
-// --- 升級池 ---
 const UPGRADE_POOL = [
     { id: 'heal', name: '緊急治療', desc: '回復 50% 的最大血量', type: 'global', rarity: '普通', action: () => { hp = Math.min(maxHp, hp + Math.floor(maxHp * 0.5)); } },
     { id: 'c_gold', name: '零錢包', desc: '立刻獲得 50 枚金幣', type: 'global', rarity: '普通', action: () => { gold += 50; sessionGold += 50; } },
-    
     { id: 'g_dmg', name: '火力全開', desc: '所有武器傷害 +15%', type: 'global', rarity: '常見', action: () => { sessionStats.damageMult += 0.15; } },
     { id: 'g_bulletspeed', name: '高壓火藥', desc: '子彈飛行速度 +25%', type: 'global', rarity: '常見', action: () => { sessionStats.bulletSpeedMult += 0.25; } },
     { id: 'g_firerate', name: '敏捷扳機', desc: '所有武器射速提升 15%', type: 'global', rarity: '常見', action: () => { sessionStats.fireRateMult *= 0.85; } },
     { id: 'u_stable', name: '穩定槍管', desc: '傷害 +10%，子彈速度 +10%', type: 'global', rarity: '常見', action: () => { sessionStats.damageMult += 0.10; sessionStats.bulletSpeedMult += 0.10; } },
     { id: 'u_bounty', name: '賞金獵人', desc: '擊殺敵人獲得的金幣 +20%', type: 'global', rarity: '常見', action: () => { sessionStats.goldBonus += 0.20; } },
-
     { id: 'maxHp', name: '強壯體魄', desc: '最大血量 +3', type: 'global', rarity: '稀有', action: () => { maxHp += 3; hp += 3; } },
     { id: 'r_lethal', name: '致命打擊', desc: '所有武器傷害 +25%', type: 'global', rarity: '稀有', action: () => { sessionStats.damageMult += 0.25; } },
-    
     { id: 'r_frost', name: '冰霜彈夾', desc: '子彈命中敵人使其減速 1%，可疊加，最高減速 40%', type: 'global', rarity: '稀有', action: () => { sessionStats.hasFrostMagazine = true; } },
-    
     { id: 'epic_dmg', name: '史詩破壞', desc: '所有武器傷害大幅提升 +40%', type: 'global', rarity: '史詩', action: () => { sessionStats.damageMult += 0.40; } },
-    { id: 'e_bulletstorm', name: '子彈風暴', desc: '所有武器每次射擊額外發射 1 顆子彈', type: 'global', rarity: '史詩', action: () => { sessionStats.extraBulletsGlobal += 1; } },
+    { id: 'e_bulletstorm', name: '子彈風暴', desc: '每次射擊額外發射 1 顆子彈', type: 'global', rarity: '史詩', action: () => { sessionStats.extraBulletsGlobal += 1; } },
     { id: 'e_goldenheart', name: '黃金之心', desc: '最大血量 +10，並回復 10 點血量', type: 'global', rarity: '史詩', action: () => { maxHp += 10; hp += 10; } },
-
     { id: 'leg_speed', name: '傳奇神速', desc: '射擊間隔大幅縮短 -40%', type: 'global', rarity: '傳奇', action: () => { sessionStats.fireRateMult *= 0.60; } },
     { id: 'l_giantkiller', name: '巨人殺手', desc: '傷害狂暴提升 +60%', type: 'global', rarity: '傳奇', action: () => { sessionStats.damageMult += 0.60; } },
     { id: 'l_relentless', name: '無情傾瀉', desc: '全武器發射數 +2，但傷害 -15%', type: 'global', rarity: '傳奇', action: () => { sessionStats.extraBulletsGlobal += 2; sessionStats.damageMult -= 0.15; } },
-
     { id: 'myth_hp', name: '神話之軀', desc: '最大血量 +20，並立刻回滿血量', type: 'global', rarity: '神話', action: () => { maxHp += 20; hp = maxHp; } },
     { id: 'm_time', name: '時空凝滯', desc: '所有敵人移動速度減慢 40%', type: 'global', rarity: '神話', action: () => { sessionStats.enemySpeedMult *= 0.60; } },
-    
     { id: 'm_wealth', name: '財富密碼', desc: '立刻獲得 10000 金幣，且擊殺金幣掉落 +100%', type: 'global', rarity: '神話', action: () => { gold += 10000; sessionGold += 10000; sessionStats.goldBonus += 1.0; } },
-
     { id: 'divine_all', name: '神聖覺醒', desc: '傷害+50% 射速+30% 血量+10', type: 'global', rarity: '神聖', action: () => { sessionStats.damageMult += 0.50; sessionStats.fireRateMult *= 0.70; maxHp += 10; hp += 10; } },
     { id: 'd_immortal', name: '不朽之軀', desc: '最大血量 +50，立刻回滿血量', type: 'global', rarity: '神聖', action: () => { maxHp += 50; hp = maxHp; } },
     { id: 'd_ultimate', name: '終極兵器', desc: '傷害+100%，全武器發射數 +1', type: 'global', rarity: '神聖', action: () => { sessionStats.damageMult += 1.0; sessionStats.extraBulletsGlobal += 1; } },
-
     { id: 'w_pistol_1', name: '手槍：雙排彈匣', desc: '手槍每次射擊多發射 1 顆子彈', type: 'pistol', rarity: '獨家', action: () => { sessionStats.weaponMods.pistol.extraBullets += 1; } },
     { id: 'w_pistol_2', name: '手槍：致命瞄準', desc: '手槍傷害獨立提升 50%', type: 'pistol', rarity: '獨家', action: () => { sessionStats.weaponMods.pistol.dmgMult += 0.50; } },
-    { id: 'w_machinegun_1', name: '機槍：穩定握把', desc: '機關槍射擊更精準，降低散射', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.spreadReduction += 0.08; } },
-    { id: 'w_machinegun_2', name: '機槍：過載引擎', desc: '機關槍射速獨立提升 30%', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.fireRateMult *= 0.70; } },
-    { id: 'w_shotgun_1', name: '散彈：密集彈雨', desc: '散彈槍發射彈丸數量 +2', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.extraBullets += 2; } },
-    { id: 'w_shotgun_2', name: '散彈：龍息彈', desc: '散彈槍子彈速度+30%，傷害+20%', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.speedMult += 0.30; sessionStats.weaponMods.shotgun.dmgMult += 0.20; } }
+    { id: 'w_machinegun_1', name: '機槍：穩定握把', desc: '降低散射', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.spreadReduction += 0.08; } },
+    { id: 'w_machinegun_2', name: '機槍：過載引擎', desc: '射速獨立提升 30%', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.fireRateMult *= 0.70; } },
+    { id: 'w_shotgun_1', name: '散彈：密集彈雨', desc: '發射彈丸數量 +2', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.extraBullets += 2; } },
+    { id: 'w_shotgun_2', name: '散彈：龍息彈', desc: '子彈速度+30%，傷害+20%', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.speedMult += 0.30; sessionStats.weaponMods.shotgun.dmgMult += 0.20; } }
 ];
 
-const SAVE_KEY = 'towerDefenseSave_WaveMod';
 function loadGameData() {
+    // 回復預設
+    gold = 0; unlockedWeapons = ['pistol']; currentWeapon = 'pistol';     
+    globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1 };
+    upgradeCosts = { fireRate: 50, damage: 100 }; 
+    maxDifficultyUnlocked = 1;
+
     const saved = localStorage.getItem(SAVE_KEY);
     if (saved) {
         try {
@@ -360,7 +399,7 @@ function saveGameData() {
 }
 
 function clearGameData() {
-    if (confirm('確定要清除所有遊戲進度嗎？這將無法復原！')) {
+    if (confirm('確定要清除此帳號的存檔進度嗎？無法復原！')) {
         localStorage.removeItem(SAVE_KEY); location.reload(); 
     }
 }
@@ -503,16 +542,10 @@ function startWave() {
     }
 
     let totalFramesAllowed = targetTimeSec * 60;
-    
-    if (enemiesToSpawn.length > 0) {
-        waveSpawnInterval = Math.max(1, Math.floor(totalFramesAllowed / enemiesToSpawn.length));
-    } else {
-        waveSpawnInterval = 60; 
-    }
+    if (enemiesToSpawn.length > 0) waveSpawnInterval = Math.max(1, Math.floor(totalFramesAllowed / enemiesToSpawn.length));
+    else waveSpawnInterval = 60; 
 
-    state = 'PLAYING'; 
-    showMenu('playing'); 
-    updateUI();
+    state = 'PLAYING'; showMenu('playing'); updateUI();
 }
 
 function handleWaveClear() {
@@ -548,7 +581,6 @@ document.getElementById('importSaveBtn').addEventListener('click', () => {
     }
 });
 
-// --- 機率面板與圖鑑邏輯 ---
 function renderProbabilities() {
     const probList = document.getElementById('probList');
     let totalWeight = 0;
@@ -606,76 +638,50 @@ window.showRarityDetails = function(rarityName) {
     detailsBox.innerHTML = html;
 };
 
-// --- 事件綁定：機率與圖鑑 ---
 document.getElementById('showProbBtn').addEventListener('click', () => { 
-    state = 'PROB'; 
-    showMenu('prob'); 
-    renderProbabilities(); 
-    document.getElementById('probDetails').style.display = 'none'; 
+    state = 'PROB'; showMenu('prob'); renderProbabilities(); document.getElementById('probDetails').style.display = 'none'; 
 });
-document.getElementById('closeProbBtn').addEventListener('click', () => { 
-    state = 'MENU'; 
-    showMenu('main'); 
-});
-
-// --- 核心遊戲邏輯 ---
+document.getElementById('closeProbBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
 
 function tryShoot() {
     const weapon = WEAPONS[currentWeapon];
     let weaponMods = sessionStats.weaponMods[currentWeapon] || {};
     
-    // 計算射速
     let baseRate = weapon.fireRate;
     let finalRate = baseRate * globalStats.fireRateMult * sessionStats.fireRateMult;
     if (weaponMods.fireRateMult) finalRate *= weaponMods.fireRateMult;
-    if (finalRate < 3) finalRate = 3; // 射速上限保護
+    if (finalRate < 3) finalRate = 3; 
 
     if (frames - lastShotFrame >= finalRate) {
         lastShotFrame = frames;
-        
         let angle = Math.atan2(mouseY - player.y, mouseX - player.x);
         
-        // 計算子彈數量
         let numBullets = weapon.bullets + sessionStats.extraBulletsGlobal;
         if (weaponMods.extraBullets) numBullets += weaponMods.extraBullets;
 
-        // 計算傷害
         let baseDmg = weapon.damage * globalStats.damageMult * sessionStats.damageMult;
         if (weaponMods.dmgMult) baseDmg *= weaponMods.dmgMult;
 
-        // 計算子彈速度
         let spd = 12 * sessionStats.bulletSpeedMult;
         if (weaponMods.speedMult) spd *= weaponMods.speedMult;
 
-        // 計算散射
         let baseSpread = weapon.spread;
         if (weaponMods.spreadReduction) baseSpread = Math.max(0, baseSpread - weaponMods.spreadReduction);
 
         for (let i = 0; i < numBullets; i++) {
             let offsetAngle = angle + (Math.random() - 0.5) * baseSpread;
-            // 散彈槍特殊處理：均勻分佈
-            if (currentWeapon === 'shotgun' && numBullets > 1) {
-                offsetAngle = angle - (baseSpread / 2) + (baseSpread / (numBullets - 1)) * i;
-            }
+            if (currentWeapon === 'shotgun' && numBullets > 1) offsetAngle = angle - (baseSpread / 2) + (baseSpread / (numBullets - 1)) * i;
 
-            bullets.push({
-                x: player.x, y: player.y,
-                vx: Math.cos(offsetAngle) * spd, 
-                vy: Math.sin(offsetAngle) * spd,
-                dmg: baseDmg, 
-                color: weapon.color, 
-                radius: 6
-            });
+            bullets.push({ x: player.x, y: player.y, vx: Math.cos(offsetAngle) * spd, vy: Math.sin(offsetAngle) * spd, dmg: baseDmg, color: weapon.color, radius: 6 });
         }
     }
 }
 
 function updateEnemies() {
-    // 生成敵人
     if (frames % waveSpawnInterval === 0 && enemiesToSpawn.length > 0) {
         let type = enemiesToSpawn.shift();
         let angle = Math.random() * Math.PI * 2;
-        let r = Math.max(canvas.width, canvas.height) * 0.8; // 在螢幕外圍生成
+        let r = Math.max(canvas.width, canvas.height) * 0.8; 
         let ex = player.x + Math.cos(angle) * r;
         let ey = player.y + Math.sin(angle) * r;
         
@@ -690,30 +696,18 @@ function updateEnemies() {
         enemies.push({ x: ex, y: ey, maxHp: ehp, hp: ehp, vx: 0, vy: 0, speed: espd, radius: erad, color: ecol, exp: expVal, gold: gVal, speedDebuff: 1 });
     }
 
-    // 更新敵人位置與碰撞判定
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i];
         let angle = Math.atan2(player.y - e.y, player.x - e.x);
         let actualSpeed = e.speed * e.speedDebuff;
-        
-        e.x += Math.cos(angle) * actualSpeed;
-        e.y += Math.sin(angle) * actualSpeed;
+        e.x += Math.cos(angle) * actualSpeed; e.y += Math.sin(angle) * actualSpeed;
 
-        // 玩家受傷判定
         let dist = Math.hypot(player.x - e.x, player.y - e.y);
         if (dist < player.radius + e.radius) {
-            hp -= 1;
-            updateUI();
-            enemies.splice(i, 1); // 撞擊後敵人消失
-            
-            // 死亡判定
+            hp -= 1; updateUI(); enemies.splice(i, 1); 
             if (hp <= 0) {
-                state = 'GAMEOVER';
-                document.getElementById('failWaveDisplay').innerText = currentWave;
-                document.getElementById('sessionGold').innerText = sessionGold;
-                showMenu('over');
-                saveGameData();
-                return;
+                state = 'GAMEOVER'; document.getElementById('failWaveDisplay').innerText = currentWave;
+                document.getElementById('sessionGold').innerText = sessionGold; showMenu('over'); saveGameData(); return;
             }
         }
     }
@@ -721,71 +715,44 @@ function updateEnemies() {
 
 function updateBullets() {
     for (let i = bullets.length - 1; i >= 0; i--) {
-        let b = bullets[i];
-        b.x += b.vx;
-        b.y += b.vy;
-        
-        // 移除飛出邊界的子彈
-        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-            bullets.splice(i, 1);
-            continue;
-        }
+        let b = bullets[i]; b.x += b.vx; b.y += b.vy;
+        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) { bullets.splice(i, 1); continue; }
 
-        // 擊中判定
         let hit = false;
         for (let j = enemies.length - 1; j >= 0; j--) {
             let e = enemies[j];
             let dist = Math.hypot(b.x - e.x, b.y - e.y);
-            
             if (dist < b.radius + e.radius) {
-                e.hp -= b.dmg;
-                hit = true;
-                
-                // 冰霜彈夾效果
-                if (sessionStats.hasFrostMagazine) {
-                    e.speedDebuff = Math.max(0.6, e.speedDebuff - 0.01);
-                }
-
-                // 擊殺敵人
+                e.hp -= b.dmg; hit = true;
+                if (sessionStats.hasFrostMagazine) e.speedDebuff = Math.max(0.6, e.speedDebuff - 0.01);
                 if (e.hp <= 0) {
-                    sessionExp += e.exp;
-                    let gEarn = Math.floor(e.gold * sessionStats.goldBonus);
-                    gold += gEarn;
-                    sessionGold += gEarn;
-                    enemies.splice(j, 1);
-                    checkLevelUp();
+                    sessionExp += e.exp; let gEarn = Math.floor(e.gold * sessionStats.goldBonus);
+                    gold += gEarn; sessionGold += gEarn; enemies.splice(j, 1); checkLevelUp();
                 }
                 break;
             }
         }
-        if (hit) bullets.splice(i, 1); // 子彈消失
+        if (hit) bullets.splice(i, 1); 
     }
 }
 
 function checkLevelUp() {
     updateUI();
     if (sessionExp >= sessionMaxExp) {
-        sessionExp -= sessionMaxExp;
-        sessionLevel++;
-        sessionMaxExp = Math.floor(sessionMaxExp * 1.3 + 10);
+        sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.3 + 10);
         triggerLevelUpMenu();
     }
 }
 
 function triggerLevelUpMenu() {
-    state = 'LEVELUP';
-    showMenu('levelup');
-    const choicesDiv = document.getElementById('levelUpChoices');
-    choicesDiv.innerHTML = '';
+    state = 'LEVELUP'; showMenu('levelup');
+    const choicesDiv = document.getElementById('levelUpChoices'); choicesDiv.innerHTML = '';
 
-    // 依照權重抽取升級 (處理專屬武器機率衰減)
     let exclWeight = RARITIES['獨家'].weight * Math.pow(0.5, sessionStats.exclusivePicks);
     let pool = [];
 
     for (let item of UPGRADE_POOL) {
-        // 過濾掉非目前使用武器的專屬升級
         if (item.type !== 'global' && item.type !== currentWeapon) continue;
-        
         let weight = item.rarity === '獨家' ? exclWeight : RARITIES[item.rarity].weight;
         pool.push({ item, weight });
     }
@@ -793,140 +760,70 @@ function triggerLevelUpMenu() {
     let totalWeight = pool.reduce((sum, p) => sum + p.weight, 0);
     let drawnChoices = [];
 
-    // 抽出三個不重複的選項
     for (let i = 0; i < 3; i++) {
-        let r = Math.random() * totalWeight;
-        let current = 0;
+        let r = Math.random() * totalWeight; let current = 0;
         for (let j = 0; j < pool.length; j++) {
             current += pool[j].weight;
             if (r <= current) {
-                drawnChoices.push(pool[j].item);
-                // 抽中後移除該選項避免重複，並重新計算總權重
-                totalWeight -= pool[j].weight;
-                pool.splice(j, 1);
-                break;
+                drawnChoices.push(pool[j].item); totalWeight -= pool[j].weight; pool.splice(j, 1); break;
             }
         }
         if (pool.length === 0) break;
     }
 
-    // 建立升級按鈕
     drawnChoices.forEach((choice) => {
-        let btn = document.createElement('button');
-        btn.className = 'upgrade-btn';
-        let rColor = RARITIES[choice.rarity].color;
-        btn.style.borderColor = rColor;
-        
-        btn.innerHTML = `
-            <span style="color:${rColor}; font-size:14px; font-weight:bold;">[${choice.rarity}]</span>
-            <strong style="color:white; margin: 5px 0;">${choice.name}</strong>
-            <span style="font-size: 14px; color: #aaa;">${choice.desc}</span>
-        `;
-        
+        let btn = document.createElement('button'); btn.className = 'upgrade-btn';
+        let rColor = RARITIES[choice.rarity].color; btn.style.borderColor = rColor;
+        btn.innerHTML = `<span style="color:${rColor}; font-size:14px; font-weight:bold;">[${choice.rarity}]</span>
+            <strong style="color:white; margin: 5px 0;">${choice.name}</strong><span style="font-size: 14px; color: #aaa;">${choice.desc}</span>`;
         btn.onclick = () => {
-            choice.action();
-            if (choice.rarity === '獨家') sessionStats.exclusivePicks++;
-            state = 'PLAYING';
-            showMenu('playing');
-            updateUI();
-            animate(); // 恢復遊戲迴圈
+            choice.action(); if (choice.rarity === '獨家') sessionStats.exclusivePicks++;
+            state = 'PLAYING'; showMenu('playing'); updateUI(); animate(); 
         };
         choicesDiv.appendChild(btn);
     });
 }
 
 function drawGame() {
-    // 繪製背景 (帶有輕微拖影效果)
-    ctx.fillStyle = 'rgba(26, 26, 26, 0.4)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // 繪製網格增添科技感
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.beginPath();
     for(let i=0; i<canvas.width; i+=100) { ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); }
     for(let i=0; i<canvas.height; i+=100) { ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); }
     ctx.stroke();
 
-    // 繪製玩家 (塔)
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-    ctx.fillStyle = player.color;
-    ctx.fill();
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = player.color;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.shadowBlur = 0; // 重置陰影
+    ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fillStyle = player.color; ctx.fill(); ctx.shadowBlur = 10; ctx.shadowColor = player.color;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke(); ctx.shadowBlur = 0; 
 
-    // 繪製砲管 (跟隨滑鼠)
     let angle = Math.atan2(mouseY - player.y, mouseX - player.x);
-    ctx.beginPath();
-    ctx.moveTo(player.x, player.y);
-    ctx.lineTo(player.x + Math.cos(angle) * 45, player.y + Math.sin(angle) * 45);
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 8;
-    ctx.lineCap = 'round';
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(player.x + Math.cos(angle) * 45, player.y + Math.sin(angle) * 45);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.stroke();
 
-    // 繪製敵人
     enemies.forEach(e => {
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-        ctx.fillStyle = e.color;
-        ctx.fill();
-        
-        // 繪製敵人血條
-        let hpWidth = e.radius * 2;
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fillStyle = e.color; ctx.fill();
+        let hpWidth = e.radius * 2; ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
         ctx.fillRect(e.x - e.radius, e.y - e.radius - 12, hpWidth, 4);
-        ctx.fillStyle = '#00ff00';
-        ctx.fillRect(e.x - e.radius, e.y - e.radius - 12, hpWidth * (e.hp / e.maxHp), 4);
+        ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - e.radius, e.y - e.radius - 12, hpWidth * (e.hp / e.maxHp), 4);
     });
 
-    // 繪製子彈
     bullets.forEach(b => {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fillStyle = b.color;
-        ctx.fill();
-        // 子彈發光效果
-        ctx.shadowBlur = 5;
-        ctx.shadowColor = b.color;
-        ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2); ctx.fillStyle = b.color; ctx.fill();
+        ctx.shadowBlur = 5; ctx.shadowColor = b.color; ctx.shadowBlur = 0;
     });
 }
 
-// 監聽視窗大小改變
-window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    player.x = canvas.width / 2;
-    player.y = canvas.height / 2;
-});
+window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; player.x = canvas.width / 2; player.y = canvas.height / 2; });
 
 function animate() {
     if (state !== 'PLAYING') return;
-    
-    requestAnimationFrame(animate);
-    frames++;
-
-    tryShoot();
-    updateBullets();
-    updateEnemies();
-    drawGame();
-
-    // 判定波數結束
+    requestAnimationFrame(animate); frames++;
+    tryShoot(); updateBullets(); updateEnemies(); drawGame();
     if (enemies.length === 0 && enemiesToSpawn.length === 0) {
-        state = 'WAVECLEAR'; // 暫停遊戲迴圈避免重複觸發
-        setTimeout(handleWaveClear, 1000); // 延遲一秒進入下一波或結算
+        state = 'WAVECLEAR'; setTimeout(handleWaveClear, 1000); 
     }
 }
 
-// 初次啟動時隱藏除了 mainMenu 以外的 UI
 showMenu('main');
-
 </script>
 </body>
 </html>
