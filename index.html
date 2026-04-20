@@ -1,820 +1,921 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <title>孤塔守衛戰 - 極限生存版</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #222; font-family: "Microsoft JhengHei", Arial, sans-serif; cursor: crosshair; }
-        canvas { display: block; background: #1a1a1a; }
-        
-        #ui { 
-            position: absolute; top: 10px; left: 10px; 
-            color: white; font-size: 18px; display: none; 
-            pointer-events: none; 
-            background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 8px;
-        }
-        #ui div { margin-bottom: 5px; }
-        #topCenterUI {
-            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-            color: #fff; font-size: 24px; font-weight: bold; display: none;
-            background: rgba(0, 0, 0, 0.6); padding: 10px 30px; border-radius: 8px; border: 2px solid #ffc107;
-            text-align: center;
-        }
-        
-        #pauseBtn {
-            pointer-events: auto;
-            margin-top: 10px; padding: 5px 15px; 
-            background: #ffc107; border: none; cursor: pointer; font-weight: bold; border-radius: 4px;
-        }
-
-        .overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85); color: white;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 10;
-        }
-        
-        #shopMenu { justify-content: flex-start; padding: 40px 0; overflow-y: auto; background: rgba(20, 20, 30, 0.95); }
-        #shopContainer { display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; }
-
-        .overlay h1 { font-size: 48px; margin-bottom: 10px; color: #00d2ff; }
-        .overlay p { font-size: 20px; margin-bottom: 20px; text-align: center;}
-        .section-title { color: #ffc107; margin: 20px 0 10px 0; font-size: 24px; font-weight: bold; border-bottom: 2px solid #ffc107; padding-bottom: 5px; width: 400px; text-align: center;}
-        
-        .btn-group { display: flex; flex-direction: column; gap: 15px; align-items: center; }
-        .row-group { display: flex; gap: 15px; justify-content: center; align-items: center; margin-bottom: 15px;}
-        
-        button.menu-btn {
-            padding: 12px 40px; font-size: 20px; cursor: pointer;
-            background: #00d2ff; color: #111; border: none; border-radius: 5px;
-            font-weight: bold; transition: 0.2s; min-width: 250px; text-align: center;
-        }
-        button.menu-btn:hover { background: #00a8cc; transform: scale(1.05); }
-        button.secondary-btn { background: #666; color: white; }
-        button.secondary-btn:hover { background: #888; }
-        button.shop-btn { background: #e91e63; color: white; }
-        button.shop-btn:hover { background: #c2185b; }
-        button.danger-btn { background: #f44336; color: white; }
-        button.danger-btn:hover { background: #d32f2f; }
-        button.victory-btn { background: #4caf50; color: white; }
-        button.victory-btn:hover { background: #388e3c; }
-        
-        button.upgrade-btn {
-            background: rgba(0, 0, 0, 0.6); border: 2px solid #00d2ff; color: white;
-            padding: 20px; border-radius: 10px; text-align: center; width: 300px;
-            display: flex; flex-direction: column; gap: 8px; align-items: center;
-            transition: all 0.3s; cursor: pointer;
-        }
-        button.upgrade-btn:hover { transform: scale(1.05); background: rgba(255, 255, 255, 0.1); }
-        button.upgrade-btn strong { font-size: 22px; }
-        button.upgrade-btn span { font-size: 16px; color: #ccc; }
-        button:disabled { background: #444 !important; color: #888 !important; cursor: not-allowed; transform: none !important; border-color: transparent !important; }
-
-        .shop-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 10px; width: 400px; display: flex; justify-content: space-between; align-items: center; }
-        .shop-item-info { display: flex; flex-direction: column; gap: 5px; }
-        .shop-item-info span:nth-child(2) { font-size: 14px; color: #aaa; }
-        
-        #diffSelector { display: none; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 8px; font-size: 20px; }
-        #diffSelector button { font-size: 20px; width: 30px; height: 30px; cursor: pointer; background: #333; color: white; border: 1px solid #777;}
-        
-        .hidden { display: none !important; }
-
-        /* 機率表專用樣式 */
-        #probContainer { display: flex; gap: 20px; align-items: flex-start; justify-content: center; margin-bottom: 20px;}
-        #probList { background: rgba(0, 0, 0, 0.7); padding: 15px; border-radius: 10px; text-align: left; border: 1px solid #444; width: 300px; }
-        
-        .prob-row { padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
-        .prob-row:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); transform: translateX(5px); }
-        .prob-row.active { background: rgba(255, 255, 255, 0.15); border-color: #ffc107; }
-
-        #probDetails { 
-            background: rgba(0, 0, 0, 0.7); padding: 20px; border-radius: 10px; 
-            border: 1px solid #444; width: 450px; height: 420px; overflow-y: auto; text-align: left;
-            display: none; 
-        }
-        #probDetails::-webkit-scrollbar { width: 8px; }
-        #probDetails::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
-        #probDetails::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
-        #probDetails::-webkit-scrollbar-thumb:hover { background: #888; }
-        
-        .detail-item { margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid #fff; }
-        .detail-item-title { color: #fff; font-size: 18px; font-weight: bold; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between; }
-        .detail-item-type { font-size: 12px; background: #444; padding: 3px 8px; border-radius: 4px; font-weight: normal; color: #eee; }
-        .detail-item-desc { color: #ccc; font-size: 14px; line-height: 1.4; }
-    </style>
-</head>
-<body>
-
-    <div id="ui">
-        <div style="color: #ffc107; font-weight: bold;">等級: <span id="levelDisplay">1</span> (<span id="expDisplay">0 / 10</span>)</div>
-        <div>金幣: <span id="goldDisplay">0</span></div>
-        <div>血量: <span id="hpDisplay">10 / 10</span></div>
-        <div>攻擊力: <span id="dmgDisplay">1.0</span></div>
-        <button id="pauseBtn">暫停遊戲 (可開軍火庫)</button>
-    </div>
-
-    <div id="topCenterUI">
-        <div id="waveTitle">第 1 波</div>
-        <div style="font-size: 16px; font-weight: normal; color: #ddd;">難度: <span id="diffHudDisplay">1</span></div>
-    </div>
-
-    <div id="mainMenu" class="overlay">
-        <h1>孤塔守衛戰</h1>
-        <p>移動滑鼠瞄準，無間斷抵禦敵人！</p>
-        
-        <div id="diffSelector" class="row-group">
-            難度: 
-            <button id="diffMinusBtn">-</button>
-            <span id="diffDisplay" style="color:#ffc107; font-weight:bold; width: 30px; text-align: center;">1</span>
-            <button id="diffPlusBtn">+</button>
-        </div>
-
-        <div class="btn-group">
-            <button id="startBtn" class="menu-btn">開始出擊</button>
-            <button id="toShopBtn" class="menu-btn shop-btn">軍火庫 (永久升級)</button>
-            <div class="row-group" style="margin-bottom: 0;">
-                <button id="exportSaveBtn" class="menu-btn secondary-btn" style="min-width: 140px; font-size: 16px; padding: 8px;">📤 匯出存檔</button>
-                <button id="importSaveBtn" class="menu-btn secondary-btn" style="min-width: 140px; font-size: 16px; padding: 8px;">📥 匯入存檔</button>
-            </div>
-            <div class="row-group" style="margin-bottom: 0;">
-                <button id="showProbBtn" class="menu-btn" style="background: #9c27b0; color: white; min-width: 150px; font-size: 16px; padding: 8px;">📊 圖鑑與機率表</button>
-                <button id="clearSaveBtn" class="menu-btn danger-btn" style="min-width: 150px; font-size: 16px; padding: 8px;">清除存檔</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="probMenu" class="overlay hidden">
-        <h1 style="color: #ffc107; margin-bottom: 5px;">升級機率與圖鑑</h1>
-        <p style="margin-top: 0;">點擊左側稀有度，可查看對應的升級項目</p>
-        
-        <div id="probContainer">
-            <div id="probList"></div>
-            <div id="probDetails">
-                <div style="text-align: center; color: #888; margin-top: 180px; font-size: 18px;">請點擊左側稀有度以查看內容</div>
-            </div>
-        </div>
-
-        <button id="closeProbBtn" class="menu-btn secondary-btn">返回主頁</button>
-    </div>
-
-    <div id="pauseMenu" class="overlay hidden">
-        <h1>遊戲暫停</h1>
-        <div class="btn-group">
-            <button id="resumeBtn" class="menu-btn">繼續戰鬥</button>
-            <button id="toShopFromGameBtn" class="menu-btn shop-btn">開啟軍火庫</button>
-            <button id="backToHomeFromPause" class="menu-btn secondary-btn">放棄並返回主頁</button>
-        </div>
-    </div>
-
-    <div id="victoryMenu" class="overlay hidden">
-        <h1 style="color: #ffc107;">🎉 防守成功！30 波通關 🎉</h1>
-        <p>你成功守護了孤塔！<br>已解鎖更高難度，或者你可以選擇進入無盡模式挑戰極限！</p>
-        <div class="btn-group">
-            <button id="backToHomeVictoryBtn" class="menu-btn victory-btn">凱旋歸來 (返回主頁)</button>
-            <button id="enterEndlessBtn" class="menu-btn danger-btn">進入無盡模式 (31波起)</button>
-        </div>
-    </div>
-
-    <div id="levelUpMenu" class="overlay hidden">
-        <h1 style="color: #ffc107; margin-bottom: 5px;">升級！選擇一項強化</h1>
-        <p style="margin-top: 0;">此強化僅限本次戰鬥有效，不同顏色代表不同稀有度！</p>
-        <div id="levelUpChoices" style="display: flex; gap: 20px; margin-top: 20px;"></div>
-    </div>
-
-    <div id="shopMenu" class="overlay hidden">
-        <div id="shopContainer">
-            <h1>終極軍火庫</h1>
-            <p>目前金幣: <span id="shopGoldDisplay">0</span></p>
-            
-            <div class="section-title">解鎖武器</div>
-            <div class="shop-list">
-                <div class="shop-item">
-                    <div class="shop-item-info"><span>基礎手槍</span><span>射速普通 / 威力普通</span></div>
-                    <button id="btn_pistol" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('pistol')">已裝備</button>
-                </div>
-                <div class="shop-item">
-                    <div class="shop-item-info"><span>重型機關槍</span><span>極高射速 / 威力較弱 / 些微散射</span></div>
-                    <button id="btn_machineGun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('machineGun')">1000 金幣</button>
-                </div>
-                <div class="shop-item">
-                    <div class="shop-item-info"><span>戰術散彈槍</span><span>射速緩慢 / 範圍高爆發</span></div>
-                    <button id="btn_shotgun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('shotgun')">3000 金幣</button>
-                </div>
-            </div>
-
-            <div class="section-title">能力強化 (永久套用)</div>
-            <div class="shop-list">
-                <div class="shop-item">
-                    <div class="shop-item-info"><span>提升射擊頻率 (-15% 間隔)</span><span id="fireRateLvl">目前等級: 1</span></div>
-                    <button id="upgFireRateBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: auto;">50 金幣</button>
-                </div>
-                <div class="shop-item">
-                    <div class="shop-item-info"><span>增加子彈威力 (+10% 傷害)</span><span id="damageLvl">目前等級: 1</span></div>
-                    <button id="upgDamageBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: auto;">100 金幣</button>
-                </div>
-            </div>
-            <br><br>
-            <button id="closeShopBtn" class="menu-btn secondary-btn">返回</button>
-        </div>
-    </div>
-
-    <div id="gameOverMenu" class="overlay hidden">
-        <h1 style="color: #ff4b2b;">防線崩潰</h1>
-        <p>你倒在了第 <span id="failWaveDisplay">1</span> 波<br>本次擊殺獲得金幣: <span id="sessionGold">0</span></p>
-        <button id="restartBtn" class="menu-btn">返回主頁</button>
-    </div>
-
-    <canvas id="gameCanvas"></canvas>
-
-<script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const ui = document.getElementById('ui');
-const topCenterUI = document.getElementById('topCenterUI');
-
-const menus = {
-    main: document.getElementById('mainMenu'),
-    pause: document.getElementById('pauseMenu'),
-    shop: document.getElementById('shopMenu'),
-    over: document.getElementById('gameOverMenu'),
-    levelup: document.getElementById('levelUpMenu'),
-    victory: document.getElementById('victoryMenu'),
-    prob: document.getElementById('probMenu') 
-};
-
-// --- 稀有度系統設定 ---
-const RARITIES = {
-    '普通': { color: '#ffffff', weight: 100 },
-    '常見': { color: '#4caf50', weight: 70 },
-    '稀有': { color: '#00d2ff', weight: 35 },
-    '史詩': { color: '#b145e9', weight: 15 },
-    '傳奇': { color: '#ff9800', weight: 5 },
-    '神話': { color: '#ff4444', weight: 2 },
-    '神聖': { color: '#ffeb3b', weight: 0.5 },
-    '獨家': { color: '#ff00ff', weight: 50 } 
-};
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let state = 'MENU'; 
-let previousState = 'MENU'; 
-let mouseX = canvas.width / 2;
-let mouseY = canvas.height / 2;
-
-// --- 遊戲永久存檔資料 ---
-let gold = 0; 
-let unlockedWeapons = ['pistol']; 
-let currentWeapon = 'pistol';     
-let globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1 };
-let upgradeCosts = { fireRate: 50, damage: 100 }; 
-let maxDifficultyUnlocked = 1;
-
-let selectedDifficulty = 1;
-
-const WEAPONS = {
-    pistol: { cost: 0, name: '基礎手槍', fireRate: 30, damage: 1, bullets: 1, spread: 0, color: '#ffff00' },
-    machineGun: { cost: 1000, name: '重型機關槍', fireRate: 6, damage: 0.6, bullets: 1, spread: 0.2, color: '#ffaa00' },
-    shotgun: { cost: 3000, name: '戰術散彈槍', fireRate: 60, damage: 1.2, bullets: 5, spread: 0.5, color: '#ff4444' }
-};
-
-// --- 單場遊戲狀態 (局內) ---
-let currentWave = 1;
-let isEndless = false;
-let maxHp = 10;
-let hp = maxHp;
-let frames = 0;
-let lastShotFrame = 0;
-let sessionGold = 0; 
-let bullets = [];
-let enemies = [];
-const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25, color: '#00d2ff' };
-
-let enemiesToSpawn = [];
-let waveSpawnInterval = 60; 
-
-let sessionExp = 0;
-let sessionLevel = 1;
-let sessionMaxExp = 10;
-let sessionStats = {}; 
-
-// --- 升級池 ---
-const UPGRADE_POOL = [
-    { id: 'heal', name: '緊急治療', desc: '回復 50% 的最大血量', type: 'global', rarity: '普通', action: () => { hp = Math.min(maxHp, hp + Math.floor(maxHp * 0.5)); } },
-    { id: 'c_gold', name: '零錢包', desc: '立刻獲得 50 枚金幣', type: 'global', rarity: '普通', action: () => { gold += 50; sessionGold += 50; } },
-    
-    { id: 'g_dmg', name: '火力全開', desc: '所有武器傷害 +15%', type: 'global', rarity: '常見', action: () => { sessionStats.damageMult += 0.15; } },
-    { id: 'g_bulletspeed', name: '高壓火藥', desc: '子彈飛行速度 +25%', type: 'global', rarity: '常見', action: () => { sessionStats.bulletSpeedMult += 0.25; } },
-    { id: 'g_firerate', name: '敏捷扳機', desc: '所有武器射速提升 15%', type: 'global', rarity: '常見', action: () => { sessionStats.fireRateMult *= 0.85; } },
-    { id: 'u_stable', name: '穩定槍管', desc: '傷害 +10%，子彈速度 +10%', type: 'global', rarity: '常見', action: () => { sessionStats.damageMult += 0.10; sessionStats.bulletSpeedMult += 0.10; } },
-    { id: 'u_bounty', name: '賞金獵人', desc: '擊殺敵人獲得的金幣 +20%', type: 'global', rarity: '常見', action: () => { sessionStats.goldBonus += 0.20; } },
-
-    { id: 'maxHp', name: '強壯體魄', desc: '最大血量 +3', type: 'global', rarity: '稀有', action: () => { maxHp += 3; hp += 3; } },
-    { id: 'r_lethal', name: '致命打擊', desc: '所有武器傷害 +25%', type: 'global', rarity: '稀有', action: () => { sessionStats.damageMult += 0.25; } },
-    
-    { id: 'r_frost', name: '冰霜彈夾', desc: '子彈命中敵人使其減速 1%，可疊加，最高減速 40%', type: 'global', rarity: '稀有', action: () => { sessionStats.hasFrostMagazine = true; } },
-    
-    { id: 'epic_dmg', name: '史詩破壞', desc: '所有武器傷害大幅提升 +40%', type: 'global', rarity: '史詩', action: () => { sessionStats.damageMult += 0.40; } },
-    { id: 'e_bulletstorm', name: '子彈風暴', desc: '所有武器每次射擊額外發射 1 顆子彈', type: 'global', rarity: '史詩', action: () => { sessionStats.extraBulletsGlobal += 1; } },
-    { id: 'e_goldenheart', name: '黃金之心', desc: '最大血量 +10，並回復 10 點血量', type: 'global', rarity: '史詩', action: () => { maxHp += 10; hp += 10; } },
-
-    { id: 'leg_speed', name: '傳奇神速', desc: '射擊間隔大幅縮短 -40%', type: 'global', rarity: '傳奇', action: () => { sessionStats.fireRateMult *= 0.60; } },
-    { id: 'l_giantkiller', name: '巨人殺手', desc: '傷害狂暴提升 +60%', type: 'global', rarity: '傳奇', action: () => { sessionStats.damageMult += 0.60; } },
-    { id: 'l_relentless', name: '無情傾瀉', desc: '全武器發射數 +2，但傷害 -15%', type: 'global', rarity: '傳奇', action: () => { sessionStats.extraBulletsGlobal += 2; sessionStats.damageMult -= 0.15; } },
-
-    { id: 'myth_hp', name: '神話之軀', desc: '最大血量 +20，並立刻回滿血量', type: 'global', rarity: '神話', action: () => { maxHp += 20; hp = maxHp; } },
-    { id: 'm_time', name: '時空凝滯', desc: '所有敵人移動速度減慢 40%', type: 'global', rarity: '神話', action: () => { sessionStats.enemySpeedMult *= 0.60; } },
-    
-    { id: 'm_wealth', name: '財富密碼', desc: '立刻獲得 10000 金幣，且擊殺金幣掉落 +100%', type: 'global', rarity: '神話', action: () => { gold += 10000; sessionGold += 10000; sessionStats.goldBonus += 1.0; } },
-
-    { id: 'divine_all', name: '神聖覺醒', desc: '傷害+50% 射速+30% 血量+10', type: 'global', rarity: '神聖', action: () => { sessionStats.damageMult += 0.50; sessionStats.fireRateMult *= 0.70; maxHp += 10; hp += 10; } },
-    { id: 'd_immortal', name: '不朽之軀', desc: '最大血量 +50，立刻回滿血量', type: 'global', rarity: '神聖', action: () => { maxHp += 50; hp = maxHp; } },
-    { id: 'd_ultimate', name: '終極兵器', desc: '傷害+100%，全武器發射數 +1', type: 'global', rarity: '神聖', action: () => { sessionStats.damageMult += 1.0; sessionStats.extraBulletsGlobal += 1; } },
-
-    { id: 'w_pistol_1', name: '手槍：雙排彈匣', desc: '手槍每次射擊多發射 1 顆子彈', type: 'pistol', rarity: '獨家', action: () => { sessionStats.weaponMods.pistol.extraBullets += 1; } },
-    { id: 'w_pistol_2', name: '手槍：致命瞄準', desc: '手槍傷害獨立提升 50%', type: 'pistol', rarity: '獨家', action: () => { sessionStats.weaponMods.pistol.dmgMult += 0.50; } },
-    { id: 'w_machinegun_1', name: '機槍：穩定握把', desc: '機關槍射擊更精準，降低散射', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.spreadReduction += 0.08; } },
-    { id: 'w_machinegun_2', name: '機槍：過載引擎', desc: '機關槍射速獨立提升 30%', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.fireRateMult *= 0.70; } },
-    { id: 'w_shotgun_1', name: '散彈：密集彈雨', desc: '散彈槍發射彈丸數量 +2', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.extraBullets += 2; } },
-    { id: 'w_shotgun_2', name: '散彈：龍息彈', desc: '散彈槍子彈速度+30%，傷害+20%', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.speedMult += 0.30; sessionStats.weaponMods.shotgun.dmgMult += 0.20; } }
-];
-
-const SAVE_KEY = 'towerDefenseSave_WaveMod';
-function loadGameData() {
-    const saved = localStorage.getItem(SAVE_KEY);
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            gold = data.gold ?? 0; unlockedWeapons = data.unlockedWeapons ?? ['pistol']; currentWeapon = data.currentWeapon ?? 'pistol';
-            globalStats = data.globalStats ?? { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1 };
-            maxDifficultyUnlocked = data.maxDifficultyUnlocked ?? 1;
-            upgradeCosts.fireRate = Math.floor(50 * Math.pow(1.5, globalStats.fireRateLvl - 1));
-            upgradeCosts.damage = Math.floor(100 * Math.pow(1.5, globalStats.damageLvl - 1));
-        } catch (e) {}
-    }
-    updateMainMenuDiffUI();
-}
-
-function saveGameData() {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ gold, unlockedWeapons, currentWeapon, globalStats, upgradeCosts, maxDifficultyUnlocked }));
-}
-
-function clearGameData() {
-    if (confirm('確定要清除所有遊戲進度嗎？這將無法復原！')) {
-        localStorage.removeItem(SAVE_KEY); location.reload(); 
-    }
-}
-loadGameData();
-
-window.addEventListener('beforeunload', () => { if(state!=='GAMEOVER') saveGameData(); });
-window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
-
-function updateMainMenuDiffUI() {
-    if (maxDifficultyUnlocked > 1) {
-        document.getElementById('diffSelector').style.display = 'flex'; document.getElementById('diffDisplay').innerText = selectedDifficulty;
-    }
-}
-document.getElementById('diffMinusBtn').addEventListener('click', () => {
-    if(selectedDifficulty > 1) selectedDifficulty--; document.getElementById('diffDisplay').innerText = selectedDifficulty;
-});
-document.getElementById('diffPlusBtn').addEventListener('click', () => {
-    if(selectedDifficulty < maxDifficultyUnlocked) selectedDifficulty++; document.getElementById('diffDisplay').innerText = selectedDifficulty;
-});
-
-function showMenu(menuKey) {
-    Object.values(menus).forEach(m => m.classList.add('hidden'));
-    ui.style.display = (menuKey === 'playing') ? 'block' : 'none';
-    topCenterUI.style.display = (menuKey === 'playing') ? 'block' : 'none';
-    if (menus[menuKey]) menus[menuKey].classList.remove('hidden');
-}
-
-function updateUI() {
-    document.getElementById('goldDisplay').innerText = gold;
-    document.getElementById('hpDisplay').innerText = `${Math.floor(hp)} / ${maxHp}`;
-    document.getElementById('shopGoldDisplay').innerText = gold;
-    document.getElementById('levelDisplay').innerText = sessionLevel;
-    document.getElementById('expDisplay').innerText = `${Math.floor(sessionExp)} / ${sessionMaxExp}`;
-    
-    let weaponDmgMult = sessionStats.weaponMods?.[currentWeapon]?.dmgMult || 1.0;
-    const currentDmg = WEAPONS[currentWeapon].damage * globalStats.damageMult * (sessionStats.damageMult || 1) * weaponDmgMult;
-    document.getElementById('dmgDisplay').innerText = currentDmg.toFixed(1);
-    
-    let waveText = isEndless ? `無盡模式 第 ${currentWave} 波` : `第 ${currentWave} 波`;
-    document.getElementById('waveTitle').innerText = waveText;
-    document.getElementById('diffHudDisplay').innerText = selectedDifficulty;
-}
-
-function updateShopUI() {
-    for (const [key, weapon] of Object.entries(WEAPONS)) {
-        const btn = document.getElementById(`btn_${key}`);
-        if (currentWeapon === key) {
-            btn.innerText = "已裝備"; btn.disabled = true; btn.style.background = "#4caf50"; btn.style.color = "white";
-        } else if (unlockedWeapons.includes(key)) {
-            if (previousState === 'PAUSED') { btn.innerText = "戰鬥中鎖定"; btn.disabled = true; btn.style.background = "#666"; btn.style.color = "#ccc";
-            } else { btn.innerText = "裝備"; btn.disabled = false; btn.style.background = "#00d2ff"; btn.style.color = "#111"; }
-        } else {
-            if (previousState === 'PAUSED') { btn.innerText = "戰鬥中鎖定"; btn.disabled = true; btn.style.background = "#666"; btn.style.color = "#ccc";
-            } else { btn.innerText = `${weapon.cost} 金幣`; btn.disabled = gold < weapon.cost; btn.style.background = gold >= weapon.cost ? "#e91e63" : "#444"; btn.style.color = "white"; }
-        }
-    }
-    document.getElementById('fireRateLvl').innerText = `目前等級: ${globalStats.fireRateLvl}`;
-    document.getElementById('damageLvl').innerText = `目前等級: ${globalStats.damageLvl}`;
-    const frBtn = document.getElementById('upgFireRateBtn');
-    if (globalStats.fireRateLvl >= 10) { frBtn.innerText = '已滿級'; frBtn.disabled = true; } 
-    else { frBtn.innerText = `${upgradeCosts.fireRate} 金幣`; frBtn.disabled = gold < upgradeCosts.fireRate; }
-    const dmgBtn = document.getElementById('upgDamageBtn');
-    dmgBtn.innerText = `${upgradeCosts.damage} 金幣`; dmgBtn.disabled = gold < upgradeCosts.damage;
-}
-
-window.buyOrEquip = function(weaponKey) {
-    if (previousState === 'PAUSED') return alert("戰鬥中無法購買或更換武器！");
-    if (unlockedWeapons.includes(weaponKey)) { currentWeapon = weaponKey; } 
-    else if (gold >= WEAPONS[weaponKey].cost) { gold -= WEAPONS[weaponKey].cost; unlockedWeapons.push(weaponKey); currentWeapon = weaponKey; }
-    saveGameData(); updateShopUI(); updateUI(); 
-};
-
-document.getElementById('upgFireRateBtn').addEventListener('click', () => {
-    if (gold >= upgradeCosts.fireRate && globalStats.fireRateLvl < 10) {
-        gold -= upgradeCosts.fireRate; globalStats.fireRateMult *= 0.85; globalStats.fireRateLvl++;
-        upgradeCosts.fireRate = Math.floor(upgradeCosts.fireRate * 1.5); saveGameData(); updateShopUI(); updateUI();
-    }
-});
-document.getElementById('upgDamageBtn').addEventListener('click', () => {
-    if (gold >= upgradeCosts.damage) {
-        gold -= upgradeCosts.damage; globalStats.damageMult += 0.10; globalStats.damageLvl++;
-        upgradeCosts.damage = Math.floor(upgradeCosts.damage * 1.5); saveGameData(); updateShopUI(); updateUI(); 
-    }
-});
-
-document.getElementById('closeShopBtn').addEventListener('click', () => {
-    state = previousState;
-    if (state === 'MENU') showMenu('main'); else if (state === 'PAUSED') showMenu('pause');
-    saveGameData();
-});
-
-function openShop(fromState) { previousState = fromState; state = 'SHOP'; showMenu('shop'); updateShopUI(); updateUI(); }
-
-function initGame() {
-    currentWave = 1; isEndless = false;
-    maxHp = Math.max(1, 10 - selectedDifficulty + 1); hp = maxHp;
-    frames = 0; lastShotFrame = 0; sessionGold = 0; sessionExp = 0; sessionLevel = 1; sessionMaxExp = 10;
-    
-    sessionStats = {
-        damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0,
-        extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0,
-        hasFrostMagazine: false, 
-        weaponMods: { 
-            pistol: { extraBullets: 0, dmgMult: 1.0 }, 
-            machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, 
-            shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0 } 
-        }
-    };
-    bullets = []; enemies = []; updateUI(); startWave(); animate();
-}
-
-function startWave() {
-    enemiesToSpawn = [];
-    let normalCount = Math.floor(10 + currentWave * 2 * selectedDifficulty);
-    let miniCount = 0; let bigCount = 0;
-
-    if (!isEndless) {
-        if (currentWave % 10 === 0) bigCount = 1; else if (currentWave % 5 === 0) miniCount = 1;
-    } else {
-        if (currentWave % 5 === 0) miniCount = 1 + Math.floor((currentWave - 30) / 5);
-        if (currentWave % 10 === 0) bigCount = 1 + Math.floor((currentWave - 30) / 10);
-    }
-
-    for(let i=0; i<normalCount; i++) enemiesToSpawn.push('normal');
-    for(let i=0; i<miniCount; i++) enemiesToSpawn.push('mini');
-    for(let i=0; i<bigCount; i++) enemiesToSpawn.push('big');
-
-    enemiesToSpawn.sort((a, b) => { const val = { 'normal': 1, 'mini': 2, 'big': 3 }; return val[a] - val[b]; });
-
-    let targetTimeSec = 20; 
-    let isBossWave = (currentWave % 10 === 0);
-
-    if (!isEndless) {
-        targetTimeSec = isBossWave ? 30 : 20;
-    } else {
-        let progress = Math.min(1, (currentWave - 30) / 70); 
-        let baseTime = 20 - (17 * progress); 
-        targetTimeSec = isBossWave ? baseTime * 1.5 : baseTime;
-        targetTimeSec = Math.max(isBossWave ? 4.5 : 3, targetTimeSec);
-    }
-
-    let totalFramesAllowed = targetTimeSec * 60;
-    
-    if (enemiesToSpawn.length > 0) {
-        waveSpawnInterval = Math.max(1, Math.floor(totalFramesAllowed / enemiesToSpawn.length));
-    } else {
-        waveSpawnInterval = 60; 
-    }
-
-    state = 'PLAYING'; 
-    showMenu('playing'); 
-    updateUI();
-}
-
-function handleWaveClear() {
-    bullets = []; 
-    if (currentWave === 30 && !isEndless) {
-        if (selectedDifficulty === maxDifficultyUnlocked) maxDifficultyUnlocked++;
-        saveGameData(); state = 'VICTORY'; showMenu('victory');
-    } else { currentWave++; saveGameData(); startWave(); }
-}
-
-document.getElementById('startBtn').addEventListener('click', () => { initGame(); });
-document.getElementById('toShopBtn').addEventListener('click', () => openShop('MENU'));
-document.getElementById('toShopFromGameBtn').addEventListener('click', () => openShop('PAUSED'));
-document.getElementById('pauseBtn').addEventListener('click', () => { state = 'PAUSED'; saveGameData(); showMenu('pause'); });
-document.getElementById('resumeBtn').addEventListener('click', () => { state = 'PLAYING'; showMenu('playing'); animate(); });
-document.getElementById('backToHomeFromPause').addEventListener('click', () => { state = 'MENU'; saveGameData(); showMenu('main'); });
-document.getElementById('restartBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
-document.getElementById('clearSaveBtn').addEventListener('click', clearGameData);
-document.getElementById('backToHomeVictoryBtn').addEventListener('click', () => { state = 'MENU'; loadGameData(); showMenu('main'); });
-document.getElementById('enterEndlessBtn').addEventListener('click', () => { isEndless = true; currentWave++; saveGameData(); startWave(); animate(); });
-
-document.getElementById('exportSaveBtn').addEventListener('click', () => {
-    const saved = localStorage.getItem(SAVE_KEY);
-    if (saved) prompt("請複製以下這串代碼：", btoa(encodeURIComponent(saved))); else alert("無存檔可以匯出！");
-});
-document.getElementById('importSaveBtn').addEventListener('click', () => {
-    const inputData = prompt("請貼上存檔代碼：");
-    if (inputData) {
-        try {
-            const decodedData = decodeURIComponent(atob(inputData)); JSON.parse(decodedData); 
-            localStorage.setItem(SAVE_KEY, decodedData); alert("存檔匯入成功！"); location.reload();
-        } catch (e) { alert("匯入失敗！"); }
-    }
-});
-
-// --- 機率面板與圖鑑邏輯 ---
-function renderProbabilities() {
-    const probList = document.getElementById('probList');
-    let totalWeight = 0;
-    for (const val of Object.values(RARITIES)) { totalWeight += val.weight; }
-    const sorted = Object.entries(RARITIES).sort((a, b) => b[1].weight - a[1].weight);
-
-    let html = '';
-    sorted.forEach(([key, val]) => {
-        let percentage = ((val.weight / totalWeight) * 100).toFixed(2);
-        let extraNote = key === '獨家' ? '<div style="font-size: 12px; color: #aaa; margin-left: 70px; margin-top: 2px;">(隨抽取次數機率遞減)</div>' : '';
-        html += `
-            <div class="prob-row" onclick="showRarityDetails('${key}')" id="prob_row_${key}">
-                <div style="font-size: 20px; display: flex; align-items: center;">
-                    <span style="color: ${val.color}; font-weight: bold; width: 60px; display: inline-block; text-shadow: 0 0 3px ${val.color};">${key}</span>
-                    <span style="color: white; margin-left: 10px;">${percentage} %</span>
-                </div>
-                ${extraNote}
-            </div>
-        `;
-    });
-    probList.innerHTML = html;
-}
-
-window.showRarityDetails = function(rarityName) {
-    document.querySelectorAll('.prob-row').forEach(el => el.classList.remove('active'));
-    document.getElementById(`prob_row_${rarityName}`).classList.add('active');
-
-    const detailsBox = document.getElementById('probDetails');
-    detailsBox.style.display = 'block';
-    
-    const rColor = RARITIES[rarityName].color;
-    const items = UPGRADE_POOL.filter(u => u.rarity === rarityName);
-    
-    let html = `<h2 style="color: ${rColor}; margin-top: 0; text-shadow: 0 0 5px ${rColor}; border-bottom: 2px solid ${rColor}; padding-bottom: 8px;">✦ ${rarityName} 升級一覽</h2>`;
-    
-    if (items.length === 0) {
-        html += `<p style="color: #aaa; text-align: center; margin-top: 50px;">此稀有度目前沒有專屬升級項目。</p>`;
-    } else {
-        items.forEach(item => {
-            let typeLabel = '';
-            if (item.type === 'global') typeLabel = '通用能力';
-            else if (WEAPONS[item.type]) typeLabel = WEAPONS[item.type].name + ' 專屬';
-            else typeLabel = item.type;
-
-            html += `
-                <div class="detail-item" style="border-left-color: ${rColor};">
-                    <div class="detail-item-title">
-                        <span>${item.name}</span>
-                        <span class="detail-item-type">${typeLabel}</span>
-                    </div>
-                    <div class="detail-item-desc">${item.desc}</div>
-                </div>
-            `;
-        });
-    }
-    detailsBox.innerHTML = html;
-};
-
-document.getElementById('showProbBtn').addEventListener('click', () => { 
-    state = 'PROB'; 
-    renderProbabilities(); 
-    document.getElementById('probDetails').style.display = 'block';
-    document.getElementById('probDetails').innerHTML = '<div style="text-align: center; color: #888; margin-top: 180px; font-size: 18px;">請點擊左側稀有度以查看內容</div>';
-    showMenu('prob'); 
-});
-document.getElementById('closeProbBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
-
-// --- 抽卡系統 ---
-function triggerLevelUp() {
-    state = 'LEVELUP'; showMenu('levelup'); updateUI();
-    
-    let availableUpgrades = UPGRADE_POOL.filter(u => u.type === 'global' || u.type === currentWeapon);
-    let choices = []; let pickCounts = {}; 
-    let currentExclusiveWeight = Math.max(2, RARITIES['獨家'].weight * Math.pow(0.5, sessionStats.exclusivePicks));
-
-    for (let i = 0; i < 3; i++) {
-        let totalWeight = 0; let weightedPool = [];
-
-        availableUpgrades.forEach(u => {
-            if (pickCounts[u.id] >= 2) return; 
-            let weight = (u.rarity === '獨家') ? currentExclusiveWeight : RARITIES[u.rarity].weight;
-            totalWeight += weight;
-            weightedPool.push({ item: u, weight: weight, cumWeight: totalWeight });
-        });
-
-        let randomVal = Math.random() * totalWeight;
-        let selected = weightedPool.find(x => randomVal <= x.cumWeight).item;
-
-        choices.push(selected);
-        pickCounts[selected.id] = (pickCounts[selected.id] || 0) + 1;
-    }
-    
-    const container = document.getElementById('levelUpChoices');
-    container.innerHTML = '';
-    
-    choices.forEach(choice => {
-        let btn = document.createElement('button'); 
-        btn.className = 'menu-btn upgrade-btn';
-        let rColor = RARITIES[choice.rarity].color;
-        
-        btn.style.borderColor = rColor;
-        if (choice.rarity === '神話' || choice.rarity === '神聖' || choice.rarity === '傳奇') {
-            btn.style.boxShadow = `0 0 15px ${rColor}88`;
-        }
-
-        btn.innerHTML = `
-            <div style="color: ${rColor}; font-size: 14px; font-weight: bold; letter-spacing: 2px;">✦ ${choice.rarity} ✦</div>
-            <strong style="color: ${rColor}; text-shadow: 0 0 5px ${rColor};">${choice.name}</strong>
-            <span>${choice.desc}</span>
-        `;
-        
-        btn.onclick = () => {
-            choice.action(); 
-            if (choice.rarity === '獨家') sessionStats.exclusivePicks++;
-
-            if (sessionExp >= sessionMaxExp) {
-                sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp();
-            } else { state = 'PLAYING'; showMenu('playing'); updateUI(); animate(); }
-        };
-        container.appendChild(btn);
-    });
-}
-
-function autoAimShoot() {
-    const weapon = WEAPONS[currentWeapon];
-    
-    let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0;
-    let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0;
-    let weaponSpeedMult = sessionStats.weaponMods[currentWeapon]?.speedMult || 1.0;
-
-    const finalDamage = weapon.damage * globalStats.damageMult * sessionStats.damageMult * weaponDmgMult;
-    const finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * sessionStats.fireRateMult * weaponFrMult));
-    const finalBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal;
-    const finalSpread = Math.max(0, weapon.spread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0));
-    const finalSpeed = 12 * sessionStats.bulletSpeedMult * weaponSpeedMult;
-
-    if (frames - lastShotFrame < finalFireRate) return;
-    const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
-
-    for (let i = 0; i < finalBullets; i++) {
-        let fireAngle = baseAngle;
-        if (finalSpread > 0) fireAngle += (Math.random() - 0.5) * finalSpread;
-        bullets.push({
-            x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, 
-            velocity: { x: Math.cos(fireAngle) * finalSpeed, y: Math.sin(fireAngle) * finalSpeed }
-        });
-    }
-    lastShotFrame = frames;
-}
-
-function spawnSpecificEnemy(type) {
-    let x, y; let radius = 20; if (type === 'mini') radius = 40; if (type === 'big') radius = 65;
-    if (Math.random() < 0.5) { x = Math.random() < 0.5 ? -radius : canvas.width + radius; y = Math.random() * canvas.height;
-    } else { x = Math.random() * canvas.width; y = Math.random() < 0.5 ? -radius : canvas.height + radius; }
-    
-    const angle = Math.atan2(player.y - y, player.x - x);
-    let baseHp = (1 + currentWave * 0.4) * (1 + (selectedDifficulty - 1) * 0.3);
-    let speed = 2; let color = '#ff4b2b'; let finalHp = baseHp;
-    let goldValue = Math.floor(baseHp) + 2; let expValue = Math.floor(baseHp);
-
-    if (type === 'mini') { finalHp = baseHp * 15; goldValue = 50 + currentWave; expValue = 50 + currentWave; color = '#9c27b0'; speed = 1.0; 
-    } else if (type === 'big') { finalHp = baseHp * 50; goldValue = 200 + currentWave * 2; expValue = 200 + currentWave * 2; color = '#e91e63'; speed = 0.4; }
-
-    enemies.push({ x, y, radius, color, hp: finalHp, maxHp: finalHp, goldValue, expValue, type, velocity: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed }, slowStacks: 0 });
-}
-
-function animate() {
-    if (state !== 'PLAYING') return; requestAnimationFrame(animate);
-    
-    ctx.fillStyle = 'rgba(26, 26, 26, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    autoAimShoot();
-
-    ctx.beginPath(); ctx.moveTo(player.x, player.y); const aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
-    ctx.lineTo(player.x + Math.cos(aimAngle) * 40, player.y + Math.sin(aimAngle) * 40);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)"; ctx.lineWidth = 2; ctx.stroke();
-    ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2); ctx.fillStyle = player.color; ctx.fill();
-
-    for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
-        let bullet = bullets[bIndex]; let nearestEnemy = null; let minDist = 150; 
-        enemies.forEach(enemy => { let dist = Math.hypot(enemy.x - bullet.x, enemy.y - bullet.y); if (dist < minDist) { minDist = dist; nearestEnemy = enemy; } });
-
-        if (nearestEnemy) {
-            const targetAngle = Math.atan2(nearestEnemy.y - bullet.y, nearestEnemy.x - bullet.x);
-            const currentAngle = Math.atan2(bullet.velocity.y, bullet.velocity.x);
-            let angleDiff = targetAngle - currentAngle;
-            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2; while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-            const turnSpeed = 0.015; const newAngle = currentAngle + Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnSpeed);
-            const speed = Math.hypot(bullet.velocity.x, bullet.velocity.y);
-            bullet.velocity.x = Math.cos(newAngle) * speed; bullet.velocity.y = Math.sin(newAngle) * speed;
-        }
-
-        bullet.x += bullet.velocity.x; bullet.y += bullet.velocity.y;
-        ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); ctx.fillStyle = bullet.color; ctx.fill();
-        if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) bullets.splice(bIndex, 1);
-    }
-
-    let shouldCheckLevelUp = false;
-
-    for (let eIndex = enemies.length - 1; eIndex >= 0; eIndex--) {
-        let enemy = enemies[eIndex]; 
-        
-        let frostSlowMult = 1 - (enemy.slowStacks * 0.01);
-        enemy.x += enemy.velocity.x * sessionStats.enemySpeedMult * frostSlowMult; 
-        enemy.y += enemy.velocity.y * sessionStats.enemySpeedMult * frostSlowMult;
-        
-        ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fillStyle = enemy.color; ctx.fill();
-        
-        if (enemy.slowStacks > 0) {
-            ctx.strokeStyle = 'rgba(0, 210, 255, 0.7)';
-            ctx.lineWidth = 2 + (enemy.slowStacks / 8);
-            ctx.stroke();
-        }
-
-        ctx.fillStyle = 'white'; ctx.font = (enemy.type === 'normal' ? 'bold 14px Arial' : 'bold 20px Arial');
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(Math.max(0, enemy.hp).toFixed(1), enemy.x, enemy.y);
-
-        const distToPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-        if (distToPlayer - enemy.radius - player.radius < 1) {
-            let dmgToPlayer = enemy.type === 'big' ? 5 : (enemy.type === 'mini' ? 3 : 1);
-            enemies.splice(eIndex, 1); hp -= dmgToPlayer; updateUI();
-            if (hp <= 0) {
-                state = 'GAMEOVER'; document.getElementById('failWaveDisplay').innerText = currentWave; document.getElementById('sessionGold').innerText = sessionGold;
-                saveGameData(); showMenu('over');
-            }
-            continue; 
-        }
-
-        for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
-            let bullet = bullets[bIndex]; const distToBullet = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
-            if (distToBullet - enemy.radius - bullet.radius < 1) {
-                enemy.hp -= bullet.damage; bullets.splice(bIndex, 1); 
-                
-                if (sessionStats.hasFrostMagazine) {
-                    enemy.slowStacks = Math.min(enemy.slowStacks + 1, 40);
-                }
-
-                if (enemy.hp <= 0) {
-                    enemies.splice(eIndex, 1); 
-                    
-                    let finalGold = Math.floor(enemy.goldValue * sessionStats.goldBonus);
-                    gold += finalGold; sessionGold += finalGold;
-                    
-                    sessionExp += enemy.expValue; shouldCheckLevelUp = true; updateUI(); break; 
-                }
-            }
-        }
-    }
-
-    if (frames % waveSpawnInterval === 0 && enemiesToSpawn.length > 0) { let type = enemiesToSpawn.shift(); spawnSpecificEnemy(type); }
-    if (enemiesToSpawn.length === 0 && enemies.length === 0 && hp > 0) { handleWaveClear(); return; }
-
-    if (shouldCheckLevelUp && sessionExp >= sessionMaxExp) { sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp(); }
-    frames++;
-}
-
-window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    player.x = canvas.width / 2; player.y = canvas.height / 2;
-    enemies.forEach(enemy => {
-        const newAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-        const speed = Math.hypot(enemy.velocity.x, enemy.velocity.y);
-        enemy.velocity.x = Math.cos(newAngle) * speed; enemy.velocity.y = Math.sin(newAngle) * speed;
-    });
-});
-
-updateUI();
-</script>
-</body>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>孤塔守衛戰 - 雲端同步極限版</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #222; font-family: "Microsoft JhengHei", Arial, sans-serif; cursor: crosshair; }
+        canvas { display: block; background: #1a1a1a; }
+        
+        #ui { 
+            position: absolute; top: 10px; left: 10px; 
+            color: white; font-size: 18px; display: none; 
+            pointer-events: none; 
+            background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 8px;
+            z-index: 5;
+        }
+        #ui div { margin-bottom: 5px; }
+        #topCenterUI {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            color: #fff; font-size: 24px; font-weight: bold; display: none;
+            background: rgba(0, 0, 0, 0.6); padding: 10px 30px; border-radius: 8px; border: 2px solid #ffc107;
+            text-align: center;
+            z-index: 5;
+        }
+        
+        #pauseBtn {
+            pointer-events: auto;
+            margin-top: 10px; padding: 5px 15px; 
+            background: #ffc107; border: none; cursor: pointer; font-weight: bold; border-radius: 4px;
+        }
+
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); color: white;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 10;
+        }
+        
+        #shopMenu { justify-content: flex-start; padding: 40px 0; overflow-y: auto; background: rgba(20, 20, 30, 0.95); }
+        #shopContainer { display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; }
+
+        .overlay h1 { font-size: 48px; margin-bottom: 10px; color: #00d2ff; }
+        .overlay p { font-size: 20px; margin-bottom: 20px; text-align: center;}
+        .section-title { color: #ffc107; margin: 20px 0 10px 0; font-size: 24px; font-weight: bold; border-bottom: 2px solid #ffc107; padding-bottom: 5px; width: 400px; text-align: center;}
+        
+        .btn-group { display: flex; flex-direction: column; gap: 15px; align-items: center; }
+        .row-group { display: flex; gap: 15px; justify-content: center; align-items: center; margin-bottom: 15px;}
+        
+        button.menu-btn {
+            padding: 12px 40px; font-size: 20px; cursor: pointer;
+            background: #00d2ff; color: #111; border: none; border-radius: 5px;
+            font-weight: bold; transition: 0.2s; min-width: 250px; text-align: center;
+        }
+        button.menu-btn:hover { background: #00a8cc; transform: scale(1.05); }
+        button.secondary-btn { background: #666; color: white; }
+        button.secondary-btn:hover { background: #888; }
+        button.shop-btn { background: #e91e63; color: white; }
+        button.shop-btn:hover { background: #c2185b; }
+        button.danger-btn { background: #f44336; color: white; }
+        button.danger-btn:hover { background: #d32f2f; }
+        button.victory-btn { background: #4caf50; color: white; }
+        button.victory-btn:hover { background: #388e3c; }
+        
+        button.upgrade-btn {
+            background: rgba(0, 0, 0, 0.6); border: 2px solid #00d2ff; color: white;
+            padding: 20px; border-radius: 10px; text-align: center; width: 300px;
+            display: flex; flex-direction: column; gap: 8px; align-items: center;
+            transition: all 0.3s; cursor: pointer;
+        }
+        button.upgrade-btn:hover { transform: scale(1.05); background: rgba(255, 255, 255, 0.1); }
+        button.upgrade-btn strong { font-size: 22px; }
+        button.upgrade-btn span { font-size: 16px; color: #ccc; }
+        button:disabled { background: #444 !important; color: #888 !important; cursor: not-allowed; transform: none !important; border-color: transparent !important; }
+
+        .shop-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 10px; width: 400px; display: flex; justify-content: space-between; align-items: center; }
+        .shop-item-info { display: flex; flex-direction: column; gap: 5px; }
+        .shop-item-info span:nth-child(2) { font-size: 14px; color: #aaa; }
+        
+        #diffSelector { display: none; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 8px; font-size: 20px; }
+        #diffSelector button { font-size: 20px; width: 30px; height: 30px; cursor: pointer; background: #333; color: white; border: 1px solid #777;}
+        
+        /* 機率表專用樣式 */
+        #probContainer { display: flex; gap: 20px; align-items: flex-start; justify-content: center; margin-bottom: 20px;}
+        #probList { background: rgba(0, 0, 0, 0.7); padding: 15px; border-radius: 10px; text-align: left; border: 1px solid #444; width: 300px; }
+        
+        .prob-row { padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
+        .prob-row:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); transform: translateX(5px); }
+        .prob-row.active { background: rgba(255, 255, 255, 0.15); border-color: #ffc107; }
+
+        #probDetails { 
+            background: rgba(0, 0, 0, 0.7); padding: 20px; border-radius: 10px; 
+            border: 1px solid #444; width: 450px; height: 420px; overflow-y: auto; text-align: left;
+            display: none; 
+        }
+        #probDetails::-webkit-scrollbar { width: 8px; }
+        #probDetails::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
+        #probDetails::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
+        #probDetails::-webkit-scrollbar-thumb:hover { background: #888; }
+        
+        .detail-item { margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid #fff; }
+        .detail-item-title { color: #fff; font-size: 18px; font-weight: bold; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between; }
+        .detail-item-type { font-size: 12px; background: #444; padding: 3px 8px; border-radius: 4px; font-weight: normal; color: #eee; }
+        .detail-item-desc { color: #ccc; font-size: 14px; line-height: 1.4; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div style="color: #ffc107; font-weight: bold;">等級: <span id="levelDisplay">1</span> (<span id="expDisplay">0 / 10</span>)</div>
+        <div>金幣: <span id="goldDisplay">0</span></div>
+        <div>血量: <span id="hpDisplay">10 / 10</span></div>
+        <div>攻擊力: <span id="dmgDisplay">1.0</span></div>
+        <button id="pauseBtn">暫停遊戲 (可開軍火庫)</button>
+    </div>
+
+    <div id="topCenterUI">
+        <div id="waveTitle">第 1 波</div>
+        <div style="font-size: 16px; font-weight: normal; color: #ddd;">難度: <span id="diffHudDisplay">1</span></div>
+    </div>
+
+    <div id="mainMenu" class="overlay">
+        <h1>孤塔守衛戰</h1>
+        <p>移動滑鼠瞄準，無間斷抵禦敵人！</p>
+        
+        <div id="diffSelector" class="row-group">
+            難度: 
+            <button id="diffMinusBtn">-</button>
+            <span id="diffDisplay" style="color:#ffc107; font-weight:bold; width: 30px; text-align: center;">1</span>
+            <button id="diffPlusBtn">+</button>
+        </div>
+
+        <div class="btn-group">
+            <button id="startBtn" class="menu-btn">開始出擊</button>
+            <button id="toShopBtn" class="menu-btn shop-btn">軍火庫 (永久升級)</button>
+            
+            <div class="row-group" style="margin-top: 10px; border-top: 1px solid #444; padding-top: 15px; flex-direction: column;">
+                <button id="googleLoginBtn" class="menu-btn" style="background: #fff; color: #757575; min-width: 250px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_Reference_Icon.svg" width="20" height="20">
+                    登入 Google 同步雲端
+                </button>
+                <div id="syncStatus" style="font-size: 14px; color: #4caf50; display: none;">✅ 已連接 Google 雲端存檔</div>
+                <button id="googleLogoutBtn" class="menu-btn secondary-btn hidden" style="min-width: 150px; font-size: 16px; padding: 8px;">登出雲端</button>
+            </div>
+
+            <div class="row-group" style="margin-bottom: 0;">
+                <button id="showProbBtn" class="menu-btn" style="background: #9c27b0; color: white; min-width: 150px; font-size: 16px; padding: 8px;">📊 圖鑑與機率表</button>
+                <button id="clearSaveBtn" class="menu-btn danger-btn" style="min-width: 150px; font-size: 16px; padding: 8px;">清除本機存檔</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="probMenu" class="overlay hidden">
+        <h1 style="color: #ffc107; margin-bottom: 5px;">升級機率與圖鑑</h1>
+        <p style="margin-top: 0;">點擊左側稀有度，可查看對應的升級項目</p>
+        
+        <div id="probContainer">
+            <div id="probList"></div>
+            <div id="probDetails">
+                <div style="text-align: center; color: #888; margin-top: 180px; font-size: 18px;">請點擊左側稀有度以查看內容</div>
+            </div>
+        </div>
+
+        <button id="closeProbBtn" class="menu-btn secondary-btn">返回主頁</button>
+    </div>
+
+    <div id="pauseMenu" class="overlay hidden">
+        <h1>遊戲暫停</h1>
+        <div class="btn-group">
+            <button id="resumeBtn" class="menu-btn">繼續戰鬥</button>
+            <button id="toShopFromGameBtn" class="menu-btn shop-btn">開啟軍火庫</button>
+            <button id="backToHomeFromPause" class="menu-btn secondary-btn">放棄並返回主頁</button>
+        </div>
+    </div>
+
+    <div id="victoryMenu" class="overlay hidden">
+        <h1 style="color: #ffc107;">🎉 防守成功！30 波通關 🎉</h1>
+        <p>你成功守護了孤塔！<br>已解鎖更高難度，或者你可以選擇進入無盡模式挑戰極限！</p>
+        <div class="btn-group">
+            <button id="backToHomeVictoryBtn" class="menu-btn victory-btn">凱旋歸來 (返回主頁)</button>
+            <button id="enterEndlessBtn" class="menu-btn danger-btn">進入無盡模式 (31波起)</button>
+        </div>
+    </div>
+
+    <div id="levelUpMenu" class="overlay hidden">
+        <h1 style="color: #ffc107; margin-bottom: 5px;">升級！選擇一項強化</h1>
+        <p style="margin-top: 0;">此強化僅限本次戰鬥有效，不同顏色代表不同稀有度！</p>
+        <div id="levelUpChoices" style="display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap; justify-content: center; max-width: 1000px;"></div>
+    </div>
+
+    <div id="shopMenu" class="overlay hidden">
+        <div id="shopContainer">
+            <h1>終極軍火庫</h1>
+            <p>目前金幣: <span id="shopGoldDisplay">0</span></p>
+            
+            <div class="section-title">解鎖武器</div>
+            <div class="shop-list">
+                <div class="shop-item">
+                    <div class="shop-item-info"><span>基礎手槍</span><span>射速普通 / 威力普通</span></div>
+                    <button id="btn_pistol" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('pistol')">已裝備</button>
+                </div>
+                <div class="shop-item">
+                    <div class="shop-item-info"><span>重型機關槍</span><span>極高射速 / 威力較弱 / 些微散射</span></div>
+                    <button id="btn_machineGun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('machineGun')">1000 金幣</button>
+                </div>
+                <div class="shop-item">
+                    <div class="shop-item-info"><span>戰術散彈槍</span><span>射速緩慢 / 範圍高爆發</span></div>
+                    <button id="btn_shotgun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('shotgun')">3000 金幣</button>
+                </div>
+            </div>
+
+            <div class="section-title">能力強化 (永久套用)</div>
+            <div class="shop-list">
+                <div class="shop-item">
+                    <div class="shop-item-info"><span>提升射擊頻率 (-15% 間隔)</span><span id="fireRateLvl">目前等級: 1</span></div>
+                    <button id="upgFireRateBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: auto;">50 金幣</button>
+                </div>
+                <div class="shop-item">
+                    <div class="shop-item-info"><span>增加子彈威力 (+10% 傷害)</span><span id="damageLvl">目前等級: 1</span></div>
+                    <button id="upgDamageBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: auto;">100 金幣</button>
+                </div>
+            </div>
+            <br><br>
+            <button id="closeShopBtn" class="menu-btn secondary-btn">返回</button>
+        </div>
+    </div>
+
+    <div id="gameOverMenu" class="overlay hidden">
+        <h1 style="color: #ff4b2b;">防線崩潰</h1>
+        <p>你倒在了第 <span id="failWaveDisplay">1</span> 波<br>本次擊殺獲得金幣: <span id="sessionGold">0</span></p>
+        <button id="restartBtn" class="menu-btn">返回主頁</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+// ==========================================
+// 1. Google Drive API 雲端同步邏輯
+// ==========================================
+const CLIENT_ID = '772341686193-bsbi3ofofg173ql7l4gvcds03tsi5tek.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const SAVE_KEY = 'towerDefenseSave_WaveMod';
+
+let tokenClient;
+let accessToken = null;
+let gapiInited = false;
+let gisInited = false;
+
+function gapiLoaded() {
+    gapi.load('client', async () => {
+        await gapi.client.init({ discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
+        gapiInited = true;
+    });
+}
+
+function gisLoaded() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: (resp) => {
+            if (resp.error) return;
+            accessToken = resp.access_token;
+            onLoginSuccess();
+        },
+    });
+    gisInited = true;
+}
+
+document.getElementById('googleLoginBtn').addEventListener('click', () => {
+    if (!gisInited || !gapiInited) { alert("Google API 尚未準備好，請稍後再試。"); return; }
+    tokenClient.requestAccessToken({ prompt: 'consent' });
+});
+
+document.getElementById('googleLogoutBtn').addEventListener('click', () => {
+    accessToken = null;
+    document.getElementById('googleLoginBtn').style.display = 'flex';
+    document.getElementById('googleLogoutBtn').classList.add('hidden');
+    document.getElementById('syncStatus').style.display = 'none';
+    alert("已登出 Google 帳號！");
+});
+
+async function onLoginSuccess() {
+    document.getElementById('googleLoginBtn').style.display = 'none';
+    document.getElementById('googleLogoutBtn').classList.remove('hidden');
+    document.getElementById('syncStatus').style.display = 'block';
+    console.log("登入成功，嘗試讀取雲端存檔...");
+    await loadFromGoogleDrive();
+}
+
+async function saveToGoogleDrive() {
+    if (!accessToken) return;
+    const fileName = 'tower_defense_cloud_save.json';
+    const gameData = localStorage.getItem(SAVE_KEY);
+    
+    try {
+        const response = await gapi.client.drive.files.list({
+            q: `name = '${fileName}' and trashed = false`,
+            fields: 'files(id)',
+        });
+        
+        const fileId = response.result.files.length > 0 ? response.result.files[0].id : null;
+        const metadata = { name: fileName, mimeType: 'application/json' };
+
+        if (fileId) {
+            await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: gameData
+            });
+        } else {
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            form.append('file', new Blob([gameData], { type: 'application/json' }));
+
+            await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${accessToken}` },
+                body: form
+            });
+        }
+        console.log("✅ 遊戲進度已同步至 Google Drive");
+    } catch (e) { console.error("雲端存檔失敗", e); }
+}
+
+async function loadFromGoogleDrive() {
+    if (!accessToken) return;
+    try {
+        const response = await gapi.client.drive.files.list({
+            q: "name = 'tower_defense_cloud_save.json' and trashed = false",
+            fields: 'files(id)',
+        });
+
+        if (response.result.files.length > 0) {
+            const fileId = response.result.files[0].id;
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const data = await res.text();
+            localStorage.setItem(SAVE_KEY, data);
+            loadLocalGameData();
+            alert("✅ 成功從 Google 雲端恢復存檔！");
+        } else {
+            console.log("雲端沒有存檔，將自動建立新存檔。");
+            saveToGoogleDrive(); 
+        }
+    } catch (e) { console.error("讀取雲端失敗", e); }
+}
+
+// 初始化呼叫
+gapiLoaded();
+gisLoaded();
+
+// ==========================================
+// 2. 核心遊戲邏輯與 UI 控制
+// ==========================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const ui = document.getElementById('ui');
+const topCenterUI = document.getElementById('topCenterUI');
+
+const menus = {
+    main: document.getElementById('mainMenu'),
+    pause: document.getElementById('pauseMenu'),
+    shop: document.getElementById('shopMenu'),
+    over: document.getElementById('gameOverMenu'),
+    levelup: document.getElementById('levelUpMenu'),
+    victory: document.getElementById('victoryMenu'),
+    prob: document.getElementById('probMenu') 
+};
+
+// 稀有度系統設定
+const RARITIES = {
+    '普通': { color: '#ffffff', weight: 100 },
+    '常見': { color: '#4caf50', weight: 70 },
+    '稀有': { color: '#00d2ff', weight: 35 },
+    '史詩': { color: '#b145e9', weight: 15 },
+    '傳奇': { color: '#ff9800', weight: 5 },
+    '神話': { color: '#ff4444', weight: 2 },
+    '神聖': { color: '#ffeb3b', weight: 0.5 },
+    '獨家': { color: '#ff00ff', weight: 50 } 
+};
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let state = 'MENU'; 
+let previousState = 'MENU'; 
+let mouseX = canvas.width / 2;
+let mouseY = canvas.height / 2;
+
+// --- 遊戲永久存檔資料 ---
+let gold = 0; 
+let unlockedWeapons = ['pistol']; 
+let currentWeapon = 'pistol';     
+let globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1 };
+let upgradeCosts = { fireRate: 50, damage: 100 }; 
+let maxDifficultyUnlocked = 1;
+let selectedDifficulty = 1;
+
+const WEAPONS = {
+    pistol: { cost: 0, name: '基礎手槍', fireRate: 30, damage: 1, bullets: 1, spread: 0, color: '#ffff00' },
+    machineGun: { cost: 1000, name: '重型機關槍', fireRate: 6, damage: 0.6, bullets: 1, spread: 0.2, color: '#ffaa00' },
+    shotgun: { cost: 3000, name: '戰術散彈槍', fireRate: 60, damage: 1.2, bullets: 5, spread: 0.5, color: '#ff4444' }
+};
+
+// --- 單場遊戲狀態 (局內) ---
+let currentWave = 1;
+let isEndless = false;
+let maxHp = 10;
+let hp = maxHp;
+let frames = 0;
+let lastShotFrame = 0;
+let sessionGold = 0; 
+let bullets = [];
+let enemies = [];
+const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25, color: '#00d2ff' };
+
+let enemiesToSpawn = [];
+let waveSpawnInterval = 60; 
+
+let sessionExp = 0;
+let sessionLevel = 1;
+let sessionMaxExp = 10;
+let sessionStats = {}; 
+
+// --- 升級池 ---
+const UPGRADE_POOL = [
+    { id: 'heal', name: '緊急治療', desc: '回復 50% 的最大血量', type: 'global', rarity: '普通', action: () => { hp = Math.min(maxHp, hp + Math.floor(maxHp * 0.5)); } },
+    { id: 'c_gold', name: '零錢包', desc: '立刻獲得 50 枚金幣', type: 'global', rarity: '普通', action: () => { gold += 50; sessionGold += 50; } },
+    
+    { id: 'g_dmg', name: '火力全開', desc: '所有武器傷害 +15%', type: 'global', rarity: '常見', action: () => { sessionStats.damageMult += 0.15; } },
+    { id: 'g_bulletspeed', name: '高壓火藥', desc: '子彈飛行速度 +25%', type: 'global', rarity: '常見', action: () => { sessionStats.bulletSpeedMult += 0.25; } },
+    { id: 'g_firerate', name: '敏捷扳機', desc: '所有武器射速提升 15%', type: 'global', rarity: '常見', action: () => { sessionStats.fireRateMult *= 0.85; } },
+    { id: 'u_stable', name: '穩定槍管', desc: '傷害 +10%，子彈速度 +10%', type: 'global', rarity: '常見', action: () => { sessionStats.damageMult += 0.10; sessionStats.bulletSpeedMult += 0.10; } },
+    { id: 'u_bounty', name: '賞金獵人', desc: '擊殺敵人獲得的金幣 +20%', type: 'global', rarity: '常見', action: () => { sessionStats.goldBonus += 0.20; } },
+
+    { id: 'maxHp', name: '強壯體魄', desc: '最大血量 +3', type: 'global', rarity: '稀有', action: () => { maxHp += 3; hp += 3; } },
+    { id: 'r_lethal', name: '致命打擊', desc: '所有武器傷害 +25%', type: 'global', rarity: '稀有', action: () => { sessionStats.damageMult += 0.25; } },
+    { id: 'r_frost', name: '冰霜彈夾', desc: '子彈命中敵人使其減速 1%，可疊加，最高減速 40%', type: 'global', rarity: '稀有', action: () => { sessionStats.hasFrostMagazine = true; } },
+    
+    { id: 'epic_dmg', name: '史詩破壞', desc: '所有武器傷害大幅提升 +40%', type: 'global', rarity: '史詩', action: () => { sessionStats.damageMult += 0.40; } },
+    { id: 'e_bulletstorm', name: '子彈風暴', desc: '所有武器每次射擊額外發射 1 顆子彈', type: 'global', rarity: '史詩', action: () => { sessionStats.extraBulletsGlobal += 1; } },
+    { id: 'e_goldenheart', name: '黃金之心', desc: '最大血量 +10，並回復 10 點血量', type: 'global', rarity: '史詩', action: () => { maxHp += 10; hp += 10; } },
+
+    { id: 'leg_speed', name: '傳奇神速', desc: '射擊間隔大幅縮短 -40%', type: 'global', rarity: '傳奇', action: () => { sessionStats.fireRateMult *= 0.60; } },
+    { id: 'l_giantkiller', name: '巨人殺手', desc: '傷害狂暴提升 +60%', type: 'global', rarity: '傳奇', action: () => { sessionStats.damageMult += 0.60; } },
+    { id: 'l_relentless', name: '無情傾瀉', desc: '全武器發射數 +2，但傷害 -15%', type: 'global', rarity: '傳奇', action: () => { sessionStats.extraBulletsGlobal += 2; sessionStats.damageMult -= 0.15; } },
+
+    { id: 'myth_hp', name: '神話之軀', desc: '最大血量 +20，並立刻回滿血量', type: 'global', rarity: '神話', action: () => { maxHp += 20; hp = maxHp; } },
+    { id: 'm_time', name: '時空凝滯', desc: '所有敵人移動速度減慢 40%', type: 'global', rarity: '神話', action: () => { sessionStats.enemySpeedMult *= 0.60; } },
+    { id: 'm_wealth', name: '財富密碼', desc: '立刻獲得 10000 金幣，且擊殺金幣掉落 +100%', type: 'global', rarity: '神話', action: () => { gold += 10000; sessionGold += 10000; sessionStats.goldBonus += 1.0; } },
+
+    { id: 'divine_all', name: '神聖覺醒', desc: '傷害+50% 射速+30% 血量+10', type: 'global', rarity: '神聖', action: () => { sessionStats.damageMult += 0.50; sessionStats.fireRateMult *= 0.70; maxHp += 10; hp += 10; } },
+    { id: 'd_immortal', name: '不朽之軀', desc: '最大血量 +50，立刻回滿血量', type: 'global', rarity: '神聖', action: () => { maxHp += 50; hp = maxHp; } },
+    { id: 'd_ultimate', name: '終極兵器', desc: '傷害+100%，全武器發射數 +1', type: 'global', rarity: '神聖', action: () => { sessionStats.damageMult += 1.0; sessionStats.extraBulletsGlobal += 1; } },
+
+    { id: 'w_pistol_1', name: '手槍：雙排彈匣', desc: '手槍每次射擊多發射 1 顆子彈', type: 'pistol', rarity: '獨家', action: () => { sessionStats.weaponMods.pistol.extraBullets += 1; } },
+    { id: 'w_pistol_2', name: '手槍：致命瞄準', desc: '手槍傷害獨立提升 50%', type: 'pistol', rarity: '獨家', action: () => { sessionStats.weaponMods.pistol.dmgMult += 0.50; } },
+    { id: 'w_machinegun_1', name: '機槍：穩定握把', desc: '機關槍射擊更精準，降低散射', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.spreadReduction += 0.08; } },
+    { id: 'w_machinegun_2', name: '機槍：過載引擎', desc: '機關槍射速獨立提升 30%', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.fireRateMult *= 0.70; } },
+    { id: 'w_shotgun_1', name: '散彈：密集彈雨', desc: '散彈槍發射彈丸數量 +2', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.extraBullets += 2; } },
+    { id: 'w_shotgun_2', name: '散彈：龍息彈', desc: '散彈槍子彈速度+30%，傷害+20%', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.speedMult += 0.30; sessionStats.weaponMods.shotgun.dmgMult += 0.20; } }
+];
+
+function loadLocalGameData() {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            gold = data.gold ?? 0; 
+            unlockedWeapons = data.unlockedWeapons ?? ['pistol']; 
+            currentWeapon = data.currentWeapon ?? 'pistol';
+            globalStats = data.globalStats ?? { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1 };
+            maxDifficultyUnlocked = data.maxDifficultyUnlocked ?? 1;
+            upgradeCosts.fireRate = Math.floor(50 * Math.pow(1.5, globalStats.fireRateLvl - 1));
+            upgradeCosts.damage = Math.floor(100 * Math.pow(1.5, globalStats.damageLvl - 1));
+            updateMainMenuDiffUI();
+            updateUI();
+        } catch (e) { console.error("本地存檔解析失敗", e); }
+    }
+}
+
+function saveGameData() {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ gold, unlockedWeapons, currentWeapon, globalStats, upgradeCosts, maxDifficultyUnlocked }));
+    if (accessToken) saveToGoogleDrive(); // 呼叫雲端同步
+}
+
+function clearGameData() {
+    if (confirm('確定要清除本機存檔嗎？這將無法復原！(如果有雲端存檔，下次登入仍會覆蓋回來)')) {
+        localStorage.removeItem(SAVE_KEY); location.reload(); 
+    }
+}
+
+loadLocalGameData();
+window.addEventListener('beforeunload', () => { if(state!=='GAMEOVER') saveGameData(); });
+window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+
+function updateMainMenuDiffUI() {
+    if (maxDifficultyUnlocked > 1) {
+        document.getElementById('diffSelector').style.display = 'flex'; 
+        document.getElementById('diffDisplay').innerText = selectedDifficulty;
+    }
+}
+document.getElementById('diffMinusBtn').addEventListener('click', () => {
+    if(selectedDifficulty > 1) selectedDifficulty--; document.getElementById('diffDisplay').innerText = selectedDifficulty;
+});
+document.getElementById('diffPlusBtn').addEventListener('click', () => {
+    if(selectedDifficulty < maxDifficultyUnlocked) selectedDifficulty++; document.getElementById('diffDisplay').innerText = selectedDifficulty;
+});
+
+function showMenu(menuKey) {
+    Object.values(menus).forEach(m => m.classList.add('hidden'));
+    ui.style.display = (menuKey === 'playing') ? 'block' : 'none';
+    topCenterUI.style.display = (menuKey === 'playing') ? 'block' : 'none';
+    if (menus[menuKey]) menus[menuKey].classList.remove('hidden');
+}
+
+function updateUI() {
+    document.getElementById('goldDisplay').innerText = gold;
+    document.getElementById('hpDisplay').innerText = `${Math.floor(hp)} / ${maxHp}`;
+    document.getElementById('shopGoldDisplay').innerText = gold;
+    document.getElementById('levelDisplay').innerText = sessionLevel;
+    document.getElementById('expDisplay').innerText = `${Math.floor(sessionExp)} / ${sessionMaxExp}`;
+    
+    let weaponDmgMult = sessionStats.weaponMods?.[currentWeapon]?.dmgMult || 1.0;
+    const currentDmg = WEAPONS[currentWeapon].damage * globalStats.damageMult * (sessionStats.damageMult || 1) * weaponDmgMult;
+    document.getElementById('dmgDisplay').innerText = currentDmg.toFixed(1);
+    
+    let waveText = isEndless ? `無盡模式 第 ${currentWave} 波` : `第 ${currentWave} 波`;
+    document.getElementById('waveTitle').innerText = waveText;
+    document.getElementById('diffHudDisplay').innerText = selectedDifficulty;
+}
+
+function updateShopUI() {
+    for (const [key, weapon] of Object.entries(WEAPONS)) {
+        const btn = document.getElementById(`btn_${key}`);
+        if (currentWeapon === key) {
+            btn.innerText = "已裝備"; btn.disabled = true; btn.style.background = "#4caf50"; btn.style.color = "white";
+        } else if (unlockedWeapons.includes(key)) {
+            if (previousState === 'PAUSED') { btn.innerText = "戰鬥中鎖定"; btn.disabled = true; btn.style.background = "#666"; btn.style.color = "#ccc";
+            } else { btn.innerText = "裝備"; btn.disabled = false; btn.style.background = "#00d2ff"; btn.style.color = "#111"; }
+        } else {
+            if (previousState === 'PAUSED') { btn.innerText = "戰鬥中鎖定"; btn.disabled = true; btn.style.background = "#666"; btn.style.color = "#ccc";
+            } else { btn.innerText = `${weapon.cost} 金幣`; btn.disabled = gold < weapon.cost; btn.style.background = gold >= weapon.cost ? "#e91e63" : "#444"; btn.style.color = "white"; }
+        }
+    }
+    document.getElementById('fireRateLvl').innerText = `目前等級: ${globalStats.fireRateLvl}`;
+    document.getElementById('damageLvl').innerText = `目前等級: ${globalStats.damageLvl}`;
+    const frBtn = document.getElementById('upgFireRateBtn');
+    if (globalStats.fireRateLvl >= 10) { frBtn.innerText = '已滿級'; frBtn.disabled = true; } 
+    else { frBtn.innerText = `${upgradeCosts.fireRate} 金幣`; frBtn.disabled = gold < upgradeCosts.fireRate; }
+    const dmgBtn = document.getElementById('upgDamageBtn');
+    dmgBtn.innerText = `${upgradeCosts.damage} 金幣`; dmgBtn.disabled = gold < upgradeCosts.damage;
+}
+
+window.buyOrEquip = function(weaponKey) {
+    if (previousState === 'PAUSED') return alert("戰鬥中無法購買或更換武器！");
+    if (unlockedWeapons.includes(weaponKey)) { currentWeapon = weaponKey; } 
+    else if (gold >= WEAPONS[weaponKey].cost) { gold -= WEAPONS[weaponKey].cost; unlockedWeapons.push(weaponKey); currentWeapon = weaponKey; }
+    saveGameData(); updateShopUI(); updateUI(); 
+};
+
+document.getElementById('upgFireRateBtn').addEventListener('click', () => {
+    if (gold >= upgradeCosts.fireRate && globalStats.fireRateLvl < 10) {
+        gold -= upgradeCosts.fireRate; globalStats.fireRateMult *= 0.85; globalStats.fireRateLvl++;
+        upgradeCosts.fireRate = Math.floor(upgradeCosts.fireRate * 1.5); saveGameData(); updateShopUI(); updateUI();
+    }
+});
+document.getElementById('upgDamageBtn').addEventListener('click', () => {
+    if (gold >= upgradeCosts.damage) {
+        gold -= upgradeCosts.damage; globalStats.damageMult += 0.10; globalStats.damageLvl++;
+        upgradeCosts.damage = Math.floor(upgradeCosts.damage * 1.5); saveGameData(); updateShopUI(); updateUI(); 
+    }
+});
+
+document.getElementById('closeShopBtn').addEventListener('click', () => {
+    state = previousState;
+    if (state === 'MENU') showMenu('main'); else if (state === 'PAUSED') showMenu('pause');
+    saveGameData();
+});
+
+function openShop(fromState) { previousState = fromState; state = 'SHOP'; showMenu('shop'); updateShopUI(); updateUI(); }
+
+function initGame() {
+    currentWave = 1; isEndless = false;
+    maxHp = Math.max(1, 10 - selectedDifficulty + 1); hp = maxHp;
+    frames = 0; lastShotFrame = 0; sessionGold = 0; sessionExp = 0; sessionLevel = 1; sessionMaxExp = 10;
+    
+    sessionStats = {
+        damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0,
+        extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0,
+        hasFrostMagazine: false, 
+        weaponMods: { 
+            pistol: { extraBullets: 0, dmgMult: 1.0 }, 
+            machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, 
+            shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0 } 
+        }
+    };
+    bullets = []; enemies = []; updateUI(); startWave(); animate();
+}
+
+function startWave() {
+    enemiesToSpawn = [];
+    let normalCount = Math.floor(10 + currentWave * 2 * selectedDifficulty);
+    let miniCount = 0; let bigCount = 0;
+
+    if (!isEndless) {
+        if (currentWave % 10 === 0) bigCount = 1; else if (currentWave % 5 === 0) miniCount = 1;
+    } else {
+        if (currentWave % 5 === 0) miniCount = 1 + Math.floor((currentWave - 30) / 5);
+        if (currentWave % 10 === 0) bigCount = 1 + Math.floor((currentWave - 30) / 10);
+    }
+
+    for(let i=0; i<normalCount; i++) enemiesToSpawn.push('normal');
+    for(let i=0; i<miniCount; i++) enemiesToSpawn.push('mini');
+    for(let i=0; i<bigCount; i++) enemiesToSpawn.push('big');
+
+    enemiesToSpawn.sort((a, b) => { const val = { 'normal': 1, 'mini': 2, 'big': 3 }; return val[a] - val[b]; });
+
+    let targetTimeSec = 20; 
+    let isBossWave = (currentWave % 10 === 0);
+
+    if (!isEndless) {
+        targetTimeSec = isBossWave ? 30 : 20;
+    } else {
+        let progress = Math.min(1, (currentWave - 30) / 70); 
+        let baseTime = 20 - (17 * progress); 
+        targetTimeSec = isBossWave ? baseTime * 1.5 : baseTime;
+        targetTimeSec = Math.max(isBossWave ? 4.5 : 3, targetTimeSec);
+    }
+
+    let totalFramesAllowed = targetTimeSec * 60;
+    if (enemiesToSpawn.length > 0) { waveSpawnInterval = Math.max(1, Math.floor(totalFramesAllowed / enemiesToSpawn.length)); } 
+    else { waveSpawnInterval = 60; }
+
+    state = 'PLAYING'; showMenu('playing'); updateUI();
+}
+
+function handleWaveClear() {
+    bullets = []; 
+    if (currentWave === 30 && !isEndless) {
+        if (selectedDifficulty === maxDifficultyUnlocked) maxDifficultyUnlocked++;
+        saveGameData(); state = 'VICTORY'; showMenu('victory');
+    } else { currentWave++; saveGameData(); startWave(); }
+}
+
+document.getElementById('startBtn').addEventListener('click', () => { initGame(); });
+document.getElementById('toShopBtn').addEventListener('click', () => openShop('MENU'));
+document.getElementById('toShopFromGameBtn').addEventListener('click', () => openShop('PAUSED'));
+document.getElementById('pauseBtn').addEventListener('click', () => { state = 'PAUSED'; saveGameData(); showMenu('pause'); });
+document.getElementById('resumeBtn').addEventListener('click', () => { state = 'PLAYING'; showMenu('playing'); animate(); });
+document.getElementById('backToHomeFromPause').addEventListener('click', () => { state = 'MENU'; saveGameData(); showMenu('main'); });
+document.getElementById('restartBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
+document.getElementById('clearSaveBtn').addEventListener('click', clearGameData);
+document.getElementById('backToHomeVictoryBtn').addEventListener('click', () => { state = 'MENU'; loadLocalGameData(); showMenu('main'); });
+document.getElementById('enterEndlessBtn').addEventListener('click', () => { isEndless = true; currentWave++; saveGameData(); startWave(); animate(); });
+
+// --- 機率面板與圖鑑邏輯 ---
+function renderProbabilities() {
+    const probList = document.getElementById('probList');
+    let totalWeight = 0;
+    for (const val of Object.values(RARITIES)) { totalWeight += val.weight; }
+    const sorted = Object.entries(RARITIES).sort((a, b) => b[1].weight - a[1].weight);
+
+    let html = '';
+    sorted.forEach(([key, val]) => {
+        let percentage = ((val.weight / totalWeight) * 100).toFixed(2);
+        let extraNote = key === '獨家' ? '<div style="font-size: 12px; color: #aaa; margin-left: 70px; margin-top: 2px;">(隨抽取次數機率遞減)</div>' : '';
+        html += `
+            <div class="prob-row" onclick="showRarityDetails('${key}')" id="prob_row_${key}">
+                <div style="font-size: 20px; display: flex; align-items: center;">
+                    <span style="color: ${val.color}; font-weight: bold; width: 60px; display: inline-block; text-shadow: 0 0 3px ${val.color};">${key}</span>
+                    <span style="color: white; margin-left: 10px;">${percentage} %</span>
+                </div>
+                ${extraNote}
+            </div>
+        `;
+    });
+    probList.innerHTML = html;
+}
+
+window.showRarityDetails = function(rarityName) {
+    document.querySelectorAll('.prob-row').forEach(el => el.classList.remove('active'));
+    document.getElementById(`prob_row_${rarityName}`).classList.add('active');
+
+    const detailsBox = document.getElementById('probDetails');
+    detailsBox.style.display = 'block';
+    
+    const rColor = RARITIES[rarityName].color;
+    const items = UPGRADE_POOL.filter(u => u.rarity === rarityName);
+    
+    let html = `<h2 style="color: ${rColor}; margin-top: 0; text-shadow: 0 0 5px ${rColor}; border-bottom: 2px solid ${rColor}; padding-bottom: 8px;">✦ ${rarityName} 升級一覽</h2>`;
+    
+    if (items.length === 0) {
+        html += `<p style="color: #aaa; text-align: center; margin-top: 50px;">此稀有度目前沒有專屬升級項目。</p>`;
+    } else {
+        items.forEach(item => {
+            let typeLabel = '';
+            if (item.type === 'global') typeLabel = '通用能力';
+            else if (WEAPONS[item.type]) typeLabel = WEAPONS[item.type].name + ' 專屬';
+            else typeLabel = item.type;
+
+            html += `
+                <div class="detail-item" style="border-left-color: ${rColor};">
+                    <div class="detail-item-title">
+                        <span>${item.name}</span>
+                        <span class="detail-item-type">${typeLabel}</span>
+                    </div>
+                    <div class="detail-item-desc">${item.desc}</div>
+                </div>
+            `;
+        });
+    }
+    detailsBox.innerHTML = html;
+};
+
+document.getElementById('showProbBtn').addEventListener('click', () => { 
+    state = 'PROB'; renderProbabilities(); 
+    document.getElementById('probDetails').style.display = 'block';
+    document.getElementById('probDetails').innerHTML = '<div style="text-align: center; color: #888; margin-top: 180px; font-size: 18px;">請點擊左側稀有度以查看內容</div>';
+    showMenu('prob'); 
+});
+document.getElementById('closeProbBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
+
+// --- 抽卡系統 ---
+function triggerLevelUp() {
+    state = 'LEVELUP'; showMenu('levelup'); updateUI();
+    
+    let availableUpgrades = UPGRADE_POOL.filter(u => u.type === 'global' || u.type === currentWeapon);
+    let choices = []; let pickCounts = {}; 
+    let currentExclusiveWeight = Math.max(2, RARITIES['獨家'].weight * Math.pow(0.5, sessionStats.exclusivePicks));
+
+    for (let i = 0; i < 3; i++) {
+        let totalWeight = 0; let weightedPool = [];
+
+        availableUpgrades.forEach(u => {
+            if (pickCounts[u.id] >= 2) return; 
+            let weight = (u.rarity === '獨家') ? currentExclusiveWeight : RARITIES[u.rarity].weight;
+            totalWeight += weight;
+            weightedPool.push({ item: u, weight: weight, cumWeight: totalWeight });
+        });
+
+        let randomVal = Math.random() * totalWeight;
+        let selected = weightedPool.find(x => randomVal <= x.cumWeight).item;
+
+        choices.push(selected);
+        pickCounts[selected.id] = (pickCounts[selected.id] || 0) + 1;
+    }
+    
+    const container = document.getElementById('levelUpChoices');
+    container.innerHTML = '';
+    
+    choices.forEach(choice => {
+        let btn = document.createElement('button'); 
+        btn.className = 'menu-btn upgrade-btn';
+        let rColor = RARITIES[choice.rarity].color;
+        
+        btn.style.borderColor = rColor;
+        if (choice.rarity === '神話' || choice.rarity === '神聖' || choice.rarity === '傳奇') {
+            btn.style.boxShadow = `0 0 15px ${rColor}88`;
+        }
+
+        btn.innerHTML = `
+            <div style="color: ${rColor}; font-size: 14px; font-weight: bold; letter-spacing: 2px;">✦ ${choice.rarity} ✦</div>
+            <strong style="color: ${rColor}; text-shadow: 0 0 5px ${rColor};">${choice.name}</strong>
+            <span>${choice.desc}</span>
+        `;
+        
+        btn.onclick = () => {
+            choice.action(); 
+            if (choice.rarity === '獨家') sessionStats.exclusivePicks++;
+
+            if (sessionExp >= sessionMaxExp) {
+                sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp();
+            } else { state = 'PLAYING'; showMenu('playing'); updateUI(); animate(); }
+        };
+        container.appendChild(btn);
+    });
+}
+
+function autoAimShoot() {
+    const weapon = WEAPONS[currentWeapon];
+    
+    let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0;
+    let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0;
+    let weaponSpeedMult = sessionStats.weaponMods[currentWeapon]?.speedMult || 1.0;
+
+    const finalDamage = weapon.damage * globalStats.damageMult * sessionStats.damageMult * weaponDmgMult;
+    const finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * sessionStats.fireRateMult * weaponFrMult));
+    const finalBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal;
+    const finalSpread = Math.max(0, weapon.spread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0));
+    const finalSpeed = 12 * sessionStats.bulletSpeedMult * weaponSpeedMult;
+
+    if (frames - lastShotFrame < finalFireRate) return;
+    const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+
+    for (let i = 0; i < finalBullets; i++) {
+        let fireAngle = baseAngle;
+        if (finalSpread > 0) fireAngle += (Math.random() - 0.5) * finalSpread;
+        bullets.push({
+            x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, 
+            velocity: { x: Math.cos(fireAngle) * finalSpeed, y: Math.sin(fireAngle) * finalSpeed }
+        });
+    }
+    lastShotFrame = frames;
+}
+
+function spawnSpecificEnemy(type) {
+    let x, y; let radius = 20; if (type === 'mini') radius = 40; if (type === 'big') radius = 65;
+    if (Math.random() < 0.5) { x = Math.random() < 0.5 ? -radius : canvas.width + radius; y = Math.random() * canvas.height;
+    } else { x = Math.random() * canvas.width; y = Math.random() < 0.5 ? -radius : canvas.height + radius; }
+    
+    const angle = Math.atan2(player.y - y, player.x - x);
+    let baseHp = (1 + currentWave * 0.4) * (1 + (selectedDifficulty - 1) * 0.3);
+    let speed = 2; let color = '#ff4b2b'; let finalHp = baseHp;
+    let goldValue = Math.floor(baseHp) + 2; let expValue = Math.floor(baseHp);
+
+    if (type === 'mini') { finalHp = baseHp * 15; goldValue = 50 + currentWave; expValue = 50 + currentWave; color = '#9c27b0'; speed = 1.0; 
+    } else if (type === 'big') { finalHp = baseHp * 50; goldValue = 200 + currentWave * 2; expValue = 200 + currentWave * 2; color = '#e91e63'; speed = 0.4; }
+
+    enemies.push({ x, y, radius, color, hp: finalHp, maxHp: finalHp, goldValue, expValue, type, velocity: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed }, slowStacks: 0 });
+}
+
+function animate() {
+    if (state !== 'PLAYING') return; requestAnimationFrame(animate);
+    
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    autoAimShoot();
+
+    ctx.beginPath(); ctx.moveTo(player.x, player.y); const aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+    ctx.lineTo(player.x + Math.cos(aimAngle) * 40, player.y + Math.sin(aimAngle) * 40);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2); ctx.fillStyle = player.color; ctx.fill();
+
+    for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
+        let bullet = bullets[bIndex]; let nearestEnemy = null; let minDist = 150; 
+        enemies.forEach(enemy => { let dist = Math.hypot(enemy.x - bullet.x, enemy.y - bullet.y); if (dist < minDist) { minDist = dist; nearestEnemy = enemy; } });
+
+        if (nearestEnemy) {
+            const targetAngle = Math.atan2(nearestEnemy.y - bullet.y, nearestEnemy.x - bullet.x);
+            const currentAngle = Math.atan2(bullet.velocity.y, bullet.velocity.x);
+            let angleDiff = targetAngle - currentAngle;
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2; while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            const turnSpeed = 0.015; const newAngle = currentAngle + Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnSpeed);
+            const speed = Math.hypot(bullet.velocity.x, bullet.velocity.y);
+            bullet.velocity.x = Math.cos(newAngle) * speed; bullet.velocity.y = Math.sin(newAngle) * speed;
+        }
+
+        bullet.x += bullet.velocity.x; bullet.y += bullet.velocity.y;
+        ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); ctx.fillStyle = bullet.color; ctx.fill();
+        if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) bullets.splice(bIndex, 1);
+    }
+
+    let shouldCheckLevelUp = false;
+
+    for (let eIndex = enemies.length - 1; eIndex >= 0; eIndex--) {
+        let enemy = enemies[eIndex]; 
+        
+        let frostSlowMult = 1 - (enemy.slowStacks * 0.01);
+        enemy.x += enemy.velocity.x * sessionStats.enemySpeedMult * frostSlowMult; 
+        enemy.y += enemy.velocity.y * sessionStats.enemySpeedMult * frostSlowMult;
+        
+        ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fillStyle = enemy.color; ctx.fill();
+        
+        if (enemy.slowStacks > 0) {
+            ctx.strokeStyle = 'rgba(0, 210, 255, 0.7)'; ctx.lineWidth = 2 + (enemy.slowStacks / 8); ctx.stroke();
+        }
+
+        ctx.fillStyle = 'white'; ctx.font = (enemy.type === 'normal' ? 'bold 14px Arial' : 'bold 20px Arial');
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(Math.max(0, enemy.hp).toFixed(1), enemy.x, enemy.y);
+
+        const distToPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+        if (distToPlayer - enemy.radius - player.radius < 1) {
+            let dmgToPlayer = enemy.type === 'big' ? 5 : (enemy.type === 'mini' ? 3 : 1);
+            enemies.splice(eIndex, 1); hp -= dmgToPlayer; updateUI();
+            if (hp <= 0) {
+                state = 'GAMEOVER'; document.getElementById('failWaveDisplay').innerText = currentWave; document.getElementById('sessionGold').innerText = sessionGold;
+                saveGameData(); showMenu('over');
+            }
+            continue; 
+        }
+
+        for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
+            let bullet = bullets[bIndex]; const distToBullet = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
+            if (distToBullet - enemy.radius - bullet.radius < 1) {
+                enemy.hp -= bullet.damage; bullets.splice(bIndex, 1); 
+                if (sessionStats.hasFrostMagazine) enemy.slowStacks = Math.min(enemy.slowStacks + 1, 40);
+
+                if (enemy.hp <= 0) {
+                    enemies.splice(eIndex, 1); 
+                    let finalGold = Math.floor(enemy.goldValue * sessionStats.goldBonus);
+                    gold += finalGold; sessionGold += finalGold;
+                    sessionExp += enemy.expValue; shouldCheckLevelUp = true; updateUI(); break; 
+                }
+            }
+        }
+    }
+
+    if (frames % waveSpawnInterval === 0 && enemiesToSpawn.length > 0) { let type = enemiesToSpawn.shift(); spawnSpecificEnemy(type); }
+    if (enemiesToSpawn.length === 0 && enemies.length === 0 && hp > 0) { handleWaveClear(); return; }
+
+    if (shouldCheckLevelUp && sessionExp >= sessionMaxExp) { sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp(); }
+    frames++;
+}
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    player.x = canvas.width / 2; player.y = canvas.height / 2;
+    enemies.forEach(enemy => {
+        const newAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+        const speed = Math.hypot(enemy.velocity.x, enemy.velocity.y);
+        enemy.velocity.x = Math.cos(newAngle) * speed; enemy.velocity.y = Math.sin(newAngle) * speed;
+    });
+});
+
+</script>
+</body>
 </html>
