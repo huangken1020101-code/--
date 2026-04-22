@@ -25,6 +25,7 @@
         .overlay h1 { font-size: 48px; margin-bottom: 10px; color: #00d2ff; }
         .overlay p { font-size: 20px; margin-bottom: 20px; text-align: center;}
         .section-title { color: #ffc107; margin: 20px 0 10px 0; font-size: 24px; font-weight: bold; border-bottom: 2px solid #ffc107; padding-bottom: 5px; width: 400px; text-align: center;}
+        .section-title.special { color: #00d2ff; border-bottom-color: #00d2ff; }
         
         .btn-group { display: flex; flex-direction: column; gap: 15px; align-items: center; }
         .row-group { display: flex; gap: 15px; justify-content: center; align-items: center; margin-bottom: 15px;}
@@ -96,6 +97,7 @@
     </div>
 
     <div id="mainMenu" class="overlay hidden">
+        <div style="font-size: 14px; color: #aaa; margin-bottom: 5px;">由(114)71114和ai製作</div>
         <h1>孤塔守衛戰</h1>
         <p>
             移動滑鼠瞄準，無間斷抵禦敵人！<br>
@@ -166,10 +168,19 @@
                 <div class="shop-item"><div class="shop-item-info"><span>重型機關槍</span><span>極高射速 / 威力較弱 / 些微散射</span></div><button id="btn_machineGun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('machineGun')">1000 金幣</button></div>
                 <div class="shop-item"><div class="shop-item-info"><span>戰術散彈槍</span><span>射速緩慢 / 範圍高爆發</span></div><button id="btn_shotgun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('shotgun')">3000 金幣</button></div>
             </div>
-            <div class="section-title">能力強化 (永久套用)</div>
+
+            <div class="section-title special">目前裝備專屬強化 (<span id="shopCurrentWeaponName"></span>)</div>
             <div class="shop-list">
-                <div class="shop-item"><div class="shop-item-info"><span>提升射擊頻率 (-1% 間隔)</span><span id="fireRateLvl">目前等級: 1</span></div><button id="upgFireRateBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: auto;">50 金幣</button></div>
-                <div class="shop-item"><div class="shop-item-info"><span>增加子彈威力 (+1% 傷害)</span><span id="damageLvl">目前等級: 1</span></div><button id="upgDamageBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: auto;">100 金幣</button></div>
+                <div class="shop-item"><div class="shop-item-info"><span>專屬武器威力 (+10% 傷害)</span><span id="w_dmgLvl">目前等級: 1 / 10</span></div><button id="upg_w_dmgBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 140px;"></button></div>
+                <div class="shop-item"><div class="shop-item-info"><span>專屬武器射速 (-5% 間隔)</span><span id="w_frLvl">目前等級: 1 / 10</span></div><button id="upg_w_frBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 140px;"></button></div>
+                <div class="shop-item"><div class="shop-item-info"><span>裝甲血量擴增 (+5 最大血量)</span><span id="w_hpLvl">目前等級: 1 / 10</span></div><button id="upg_w_hpBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 140px;"></button></div>
+            </div>
+
+            <div class="section-title">通用能力強化 (永久套用)</div>
+            <div class="shop-list">
+                <div class="shop-item"><div class="shop-item-info"><span>提升射擊頻率 (-8% 間隔)</span><span id="fireRateLvl">目前等級: 1</span></div><button id="upgFireRateBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: auto;">50 金幣</button></div>
+                <div class="shop-item"><div class="shop-item-info"><span>增加子彈威力 (+10% 傷害)</span><span id="damageLvl">目前等級: 1</span></div><button id="upgDamageBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: auto;">100 金幣</button></div>
+                <div class="shop-item"><div class="shop-item-info"><span>增加最大血量 (+10% 血量)</span><span id="hpLvl">目前等級: 1</span></div><button id="upgHpBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: auto;">200 金幣</button></div>
             </div>
             <br><br><button id="closeShopBtn" class="menu-btn secondary-btn">返回</button>
         </div>
@@ -185,7 +196,7 @@
 
 <script>
 // ==========================================
-// 🌟 1. Firebase 雲端資料庫初始化設定
+// 1. Firebase 雲端資料庫初始化設定
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyDTYIxFK1hno76GNNrXZoqvqlvU_Pm6jVQ",
@@ -225,8 +236,13 @@ let mouseY = canvas.height / 2;
 
 // 遊戲永久存檔資料
 let gold = 0; let unlockedWeapons = ['pistol']; let currentWeapon = 'pistol';     
-let globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1 };
-let upgradeCosts = { fireRate: 50, damage: 100 }; let maxDifficultyUnlocked = 1;
+let globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1, hpMult: 1.0, hpLvl: 1 };
+let weaponUpgrades = { 
+    pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, 
+    machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, 
+    shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } 
+};
+let upgradeCosts = { fireRate: 50, damage: 100, hp: 200 }; let maxDifficultyUnlocked = 1;
 let selectedDifficulty = 1;
 
 const WEAPONS = {
@@ -274,7 +290,7 @@ const UPGRADE_POOL = [
 ];
 
 // ==========================================
-// 🌟 2. 雲端存檔與帳號系統 🌟
+// 2. 雲端存檔與帳號系統 
 // ==========================================
 let currentUser = localStorage.getItem('towerDefenseUser_email');
 
@@ -318,12 +334,20 @@ async function loadGameData() {
             gold = data.gold ?? 0; 
             unlockedWeapons = data.unlockedWeapons ?? ['pistol']; 
             currentWeapon = data.currentWeapon ?? 'pistol';
-            globalStats = data.globalStats ?? { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1 };
+            globalStats = data.globalStats ?? { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1, hpMult: 1.0, hpLvl: 1 };
+            if (globalStats.hpMult === undefined) globalStats.hpMult = 1.0;
+            if (globalStats.hpLvl === undefined) globalStats.hpLvl = 1;
+            
+            // 讀取武器專屬升級 (確保兼容舊存檔)
+            weaponUpgrades = data.weaponUpgrades ?? { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } };
+            Object.keys(WEAPONS).forEach(k => { if (!weaponUpgrades[k]) weaponUpgrades[k] = { dmgLvl: 1, frLvl: 1, hpLvl: 1 }; });
+
             maxDifficultyUnlocked = data.maxDifficultyUnlocked ?? 1;
             console.log("☁️ 成功從雲端下載進度！");
         } else {
             gold = 0; unlockedWeapons = ['pistol']; currentWeapon = 'pistol';
-            globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1 };
+            globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1, hpMult: 1.0, hpLvl: 1 };
+            weaponUpgrades = { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } };
             maxDifficultyUnlocked = 1;
             console.log("⭐ 新指揮官，已建立全新進度！");
         }
@@ -334,6 +358,7 @@ async function loadGameData() {
 
     upgradeCosts.fireRate = Math.floor(50 * Math.pow(1.5, globalStats.fireRateLvl - 1));
     upgradeCosts.damage = Math.floor(100 * Math.pow(1.5, globalStats.damageLvl - 1));
+    upgradeCosts.hp = Math.floor(200 * Math.pow(1.5, globalStats.hpLvl - 1));
 
     document.getElementById('startBtn').disabled = false;
     document.getElementById('currentUserDisplay').innerText = `👤 目前指揮官: ${currentUser}`;
@@ -343,7 +368,7 @@ async function loadGameData() {
 
 function saveGameData() {
     if (state !== 'GAMEOVER' && currentUser) {
-        const data = { gold, unlockedWeapons, currentWeapon, globalStats, upgradeCosts, maxDifficultyUnlocked };
+        const data = { gold, unlockedWeapons, currentWeapon, globalStats, weaponUpgrades, upgradeCosts, maxDifficultyUnlocked };
         localStorage.setItem(`towerDefenseSave_${currentUser}`, JSON.stringify(data));
         db.collection("saves").doc(currentUser).set(data)
           .then(() => console.log("☁️ 雲端存檔已同步！"))
@@ -379,15 +404,37 @@ function showMenu(menuKey) {
     if (menus[menuKey]) menus[menuKey].classList.remove('hidden');
 }
 
+// 根據難度、全局血量倍率與武器裝甲血量加成計算
+function calculateMaxHp() {
+    let baseMaxHp = Math.max(1, 10 - selectedDifficulty + 1); 
+    let wUpg = weaponUpgrades[currentWeapon] || {hpLvl: 1};
+    let wHpBonus = (wUpg.hpLvl - 1) * 5; // 每升級一次專屬血量，最大血量直接+5
+    return Math.round(baseMaxHp * globalStats.hpMult) + wHpBonus;
+}
+
+// 計算專屬升級費用的輔助函數
+function calculateWeaponUpgradeCost(baseCost, towerCost, level) {
+    let ratioCost = Math.floor(baseCost + (towerCost * 0.1));
+    return Math.floor(ratioCost * Math.pow(1.5, level - 1));
+}
+
 function updateUI() {
     document.getElementById('goldDisplay').innerText = gold;
-    document.getElementById('hpDisplay').innerText = `${Math.floor(hp)} / ${maxHp}`;
+    
+    // 如果在非戰鬥畫面，動態顯示當前裝備的數值
+    let displayMaxHp = (state === 'MENU' || state === 'SHOP' && previousState === 'MENU') ? calculateMaxHp() : maxHp;
+    let displayHp = (state === 'MENU' || state === 'SHOP' && previousState === 'MENU') ? displayMaxHp : Math.floor(hp);
+    document.getElementById('hpDisplay').innerText = `${displayHp} / ${displayMaxHp}`;
+    
     document.getElementById('shopGoldDisplay').innerText = gold;
     document.getElementById('levelDisplay').innerText = sessionLevel;
     document.getElementById('expDisplay').innerText = `${Math.floor(sessionExp)} / ${sessionMaxExp}`;
     
     let weaponDmgMult = sessionStats.weaponMods?.[currentWeapon]?.dmgMult || 1.0;
-    const currentDmg = WEAPONS[currentWeapon].damage * globalStats.damageMult * (sessionStats.damageMult || 1) * weaponDmgMult;
+    let wUpg = weaponUpgrades[currentWeapon] || {dmgLvl: 1};
+    let wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); 
+    
+    const currentDmg = WEAPONS[currentWeapon].damage * globalStats.damageMult * wDmgBonus * (sessionStats.damageMult || 1) * weaponDmgMult;
     document.getElementById('dmgDisplay').innerText = currentDmg.toFixed(1);
     
     let waveText = isEndless ? `無盡模式 第 ${currentWave} 波` : `第 ${currentWave} 波`;
@@ -396,6 +443,9 @@ function updateUI() {
 }
 
 function updateShopUI() {
+    const towerCost = WEAPONS[currentWeapon].cost;
+
+    // 武器解鎖按鈕狀態
     for (const [key, weapon] of Object.entries(WEAPONS)) {
         const btn = document.getElementById(`btn_${key}`);
         if (currentWeapon === key) {
@@ -408,8 +458,36 @@ function updateShopUI() {
             } else { btn.innerText = `${weapon.cost} 金幣`; btn.disabled = gold < weapon.cost; btn.style.background = gold >= weapon.cost ? "#e91e63" : "#444"; btn.style.color = "white"; }
         }
     }
+    
+    // 專屬強化區塊更新
+    document.getElementById('shopCurrentWeaponName').innerText = WEAPONS[currentWeapon].name;
+    const wUpg = weaponUpgrades[currentWeapon];
+    
+    // 使用動態計算的專屬升級費用
+    const wDmgCost = calculateWeaponUpgradeCost(100, towerCost, wUpg.dmgLvl);
+    const wFrCost = calculateWeaponUpgradeCost(100, towerCost, wUpg.frLvl);
+    const wHpCost = calculateWeaponUpgradeCost(150, towerCost, wUpg.hpLvl);
+
+    document.getElementById('w_dmgLvl').innerText = `目前等級: ${wUpg.dmgLvl} / 10`;
+    document.getElementById('w_frLvl').innerText = `目前等級: ${wUpg.frLvl} / 10`;
+    document.getElementById('w_hpLvl').innerText = `目前等級: ${wUpg.hpLvl} / 10`;
+
+    const btnWDmg = document.getElementById('upg_w_dmgBtn');
+    if (wUpg.dmgLvl >= 10) { btnWDmg.innerText = "特殊突破(暫未開放)"; btnWDmg.disabled = true; }
+    else { btnWDmg.innerText = `${wDmgCost} 金幣`; btnWDmg.disabled = gold < wDmgCost; btnWDmg.style.background = gold >= wDmgCost ? "#00d2ff" : "#444"; btnWDmg.style.color = gold >= wDmgCost ? "#111" : "white"; }
+
+    const btnWFr = document.getElementById('upg_w_frBtn');
+    if (wUpg.frLvl >= 10) { btnWFr.innerText = "特殊突破(暫未開放)"; btnWFr.disabled = true; }
+    else { btnWFr.innerText = `${wFrCost} 金幣`; btnWFr.disabled = gold < wFrCost; btnWFr.style.background = gold >= wFrCost ? "#00d2ff" : "#444"; btnWFr.style.color = gold >= wFrCost ? "#111" : "white"; }
+
+    const btnWHp = document.getElementById('upg_w_hpBtn');
+    if (wUpg.hpLvl >= 10) { btnWHp.innerText = "特殊突破(暫未開放)"; btnWHp.disabled = true; }
+    else { btnWHp.innerText = `${wHpCost} 金幣`; btnWHp.disabled = gold < wHpCost; btnWHp.style.background = gold >= wHpCost ? "#00d2ff" : "#444"; btnWHp.style.color = gold >= wHpCost ? "#111" : "white"; }
+
+    // 通用強化區塊更新
     document.getElementById('fireRateLvl').innerText = `目前等級: ${globalStats.fireRateLvl}`;
     document.getElementById('damageLvl').innerText = `目前等級: ${globalStats.damageLvl}`;
+    document.getElementById('hpLvl').innerText = `目前等級: ${globalStats.hpLvl}`;
     
     const frBtn = document.getElementById('upgFireRateBtn');
     frBtn.innerText = `${upgradeCosts.fireRate} 金幣`; 
@@ -418,6 +496,10 @@ function updateShopUI() {
     const dmgBtn = document.getElementById('upgDamageBtn');
     dmgBtn.innerText = `${upgradeCosts.damage} 金幣`; 
     dmgBtn.disabled = gold < upgradeCosts.damage;
+    
+    const hpBtn = document.getElementById('upgHpBtn');
+    hpBtn.innerText = `${upgradeCosts.hp} 金幣`; 
+    hpBtn.disabled = gold < upgradeCosts.hp;
 }
 
 window.buyOrEquip = function(weaponKey) {
@@ -428,38 +510,42 @@ window.buyOrEquip = function(weaponKey) {
 };
 
 // ==========================================
-// 🔧 修改區：無上限 1% 升級
+// 專屬武器升級邏輯
 // ==========================================
-document.getElementById('upgFireRateBtn').addEventListener('click', () => {
-    if (gold >= upgradeCosts.fireRate) { 
-        gold -= upgradeCosts.fireRate; 
-        globalStats.fireRateMult *= 0.99; // 每次間隔縮短 1%
-        globalStats.fireRateLvl++; 
-        upgradeCosts.fireRate = Math.floor(upgradeCosts.fireRate * 1.5); 
-        saveGameData(); 
-        updateShopUI(); 
-        updateUI(); 
-    }
+document.getElementById('upg_w_dmgBtn').addEventListener('click', () => {
+    const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost;
+    const cost = calculateWeaponUpgradeCost(100, towerCost, wUpg.dmgLvl);
+    if (gold >= cost && wUpg.dmgLvl < 10) { gold -= cost; wUpg.dmgLvl++; saveGameData(); updateShopUI(); updateUI(); }
+});
+document.getElementById('upg_w_frBtn').addEventListener('click', () => {
+    const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost;
+    const cost = calculateWeaponUpgradeCost(100, towerCost, wUpg.frLvl);
+    if (gold >= cost && wUpg.frLvl < 10) { gold -= cost; wUpg.frLvl++; saveGameData(); updateShopUI(); updateUI(); }
+});
+document.getElementById('upg_w_hpBtn').addEventListener('click', () => {
+    const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost;
+    const cost = calculateWeaponUpgradeCost(150, towerCost, wUpg.hpLvl);
+    if (gold >= cost && wUpg.hpLvl < 10) { gold -= cost; wUpg.hpLvl++; saveGameData(); updateShopUI(); updateUI(); }
 });
 
-document.getElementById('upgDamageBtn').addEventListener('click', () => {
-    if (gold >= upgradeCosts.damage) { 
-        gold -= upgradeCosts.damage; 
-        globalStats.damageMult += 0.01; // 每次傷害增加 1%
-        globalStats.damageLvl++; 
-        upgradeCosts.damage = Math.floor(upgradeCosts.damage * 1.5); 
-        saveGameData(); 
-        updateShopUI(); 
-        updateUI(); 
-    }
+// 通用升級邏輯
+document.getElementById('upgFireRateBtn').addEventListener('click', () => {
+    if (gold >= upgradeCosts.fireRate) { gold -= upgradeCosts.fireRate; globalStats.fireRateMult *= 0.92; globalStats.fireRateLvl++; upgradeCosts.fireRate = Math.floor(upgradeCosts.fireRate * 1.5); saveGameData(); updateShopUI(); updateUI(); }
 });
-// ==========================================
+document.getElementById('upgDamageBtn').addEventListener('click', () => {
+    if (gold >= upgradeCosts.damage) { gold -= upgradeCosts.damage; globalStats.damageMult += 0.10; globalStats.damageLvl++; upgradeCosts.damage = Math.floor(upgradeCosts.damage * 1.5); saveGameData(); updateShopUI(); updateUI(); }
+});
+document.getElementById('upgHpBtn').addEventListener('click', () => {
+    if (gold >= upgradeCosts.hp) { gold -= upgradeCosts.hp; globalStats.hpMult += 0.10; globalStats.hpLvl++; upgradeCosts.hp = Math.floor(upgradeCosts.hp * 1.5); saveGameData(); updateShopUI(); updateUI(); }
+});
 
 document.getElementById('closeShopBtn').addEventListener('click', () => { state = previousState; if (state === 'MENU') showMenu('main'); else if (state === 'PAUSED') showMenu('pause'); saveGameData(); });
 function openShop(fromState) { previousState = fromState; state = 'SHOP'; showMenu('shop'); updateShopUI(); updateUI(); }
 
 function initGame() {
-    currentWave = 1; isEndless = false; maxHp = Math.max(1, 10 - selectedDifficulty + 1); hp = maxHp;
+    currentWave = 1; isEndless = false; 
+    maxHp = calculateMaxHp();
+    hp = maxHp;
     frames = 0; lastShotFrame = 0; sessionGold = 0; sessionExp = 0; sessionLevel = 1; sessionMaxExp = 10;
     sessionStats = { damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, hasFrostMagazine: false, weaponMods: { pistol: { extraBullets: 0, dmgMult: 1.0 }, machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0 } } };
     bullets = []; enemies = []; updateUI(); startWave(); animate();
@@ -494,7 +580,7 @@ document.getElementById('backToHomeVictoryBtn').addEventListener('click', () => 
 document.getElementById('enterEndlessBtn').addEventListener('click', () => { isEndless = true; currentWave++; saveGameData(); startWave(); animate(); });
 
 document.getElementById('exportSaveBtn').addEventListener('click', () => {
-    const data = { gold, unlockedWeapons, currentWeapon, globalStats, upgradeCosts, maxDifficultyUnlocked };
+    const data = { gold, unlockedWeapons, currentWeapon, globalStats, weaponUpgrades, upgradeCosts, maxDifficultyUnlocked };
     prompt(`請複製以下這串【${currentUser}】的備份代碼：`, btoa(encodeURIComponent(JSON.stringify(data)))); 
 });
 document.getElementById('importSaveBtn').addEventListener('click', () => {
@@ -502,7 +588,14 @@ document.getElementById('importSaveBtn').addEventListener('click', () => {
     if (inputData) {
         try {
             const decodedData = decodeURIComponent(atob(inputData)); const data = JSON.parse(decodedData);
-            gold = data.gold ?? 0; unlockedWeapons = data.unlockedWeapons ?? ['pistol']; currentWeapon = data.currentWeapon ?? 'pistol'; globalStats = data.globalStats ?? { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1 }; maxDifficultyUnlocked = data.maxDifficultyUnlocked ?? 1;
+            gold = data.gold ?? 0; unlockedWeapons = data.unlockedWeapons ?? ['pistol']; currentWeapon = data.currentWeapon ?? 'pistol'; 
+            globalStats = data.globalStats ?? { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1, hpMult: 1.0, hpLvl: 1 }; maxDifficultyUnlocked = data.maxDifficultyUnlocked ?? 1;
+            if (globalStats.hpMult === undefined) globalStats.hpMult = 1.0;
+            if (globalStats.hpLvl === undefined) globalStats.hpLvl = 1;
+            
+            weaponUpgrades = data.weaponUpgrades ?? { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } };
+            Object.keys(WEAPONS).forEach(k => { if (!weaponUpgrades[k]) weaponUpgrades[k] = { dmgLvl: 1, frLvl: 1, hpLvl: 1 }; });
+
             saveGameData(); alert("匯入並上傳雲端成功！"); location.reload();
         } catch (e) { alert("匯入失敗！代碼錯誤。"); }
     }
@@ -528,9 +621,6 @@ window.showRarityDetails = function(rarityName) {
 document.getElementById('showProbBtn').addEventListener('click', () => { state = 'PROB'; renderProbabilities(); document.getElementById('probDetails').style.display = 'block'; document.getElementById('probDetails').innerHTML = '<div style="text-align: center; color: #888; margin-top: 180px; font-size: 18px;">請點擊左側稀有度以查看內容</div>'; showMenu('prob'); });
 document.getElementById('closeProbBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
 
-// ==========================================
-// 🌟 3. 精準抽卡機制 (同詞條最多2次，動態機率)
-// ==========================================
 function triggerLevelUp() {
     state = 'LEVELUP'; showMenu('levelup'); updateUI();
     
@@ -601,8 +691,22 @@ function triggerLevelUp() {
 }
 
 function autoAimShoot() {
-    const weapon = WEAPONS[currentWeapon]; let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0; let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0; let weaponSpeedMult = sessionStats.weaponMods[currentWeapon]?.speedMult || 1.0;
-    const finalDamage = weapon.damage * globalStats.damageMult * sessionStats.damageMult * weaponDmgMult; const finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * sessionStats.fireRateMult * weaponFrMult)); const finalBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal; const finalSpread = Math.max(0, weapon.spread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0)); const finalSpeed = 12 * sessionStats.bulletSpeedMult * weaponSpeedMult;
+    const weapon = WEAPONS[currentWeapon]; 
+    let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0; 
+    let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0; 
+    let weaponSpeedMult = sessionStats.weaponMods[currentWeapon]?.speedMult || 1.0;
+
+    // 加入武器專屬升級倍率
+    const wUpg = weaponUpgrades[currentWeapon];
+    const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); // 專屬每級+10%
+    const wFrBonus = Math.pow(0.95, wUpg.frLvl - 1);  // 專屬每級-5%
+
+    const finalDamage = weapon.damage * globalStats.damageMult * wDmgBonus * sessionStats.damageMult * weaponDmgMult; 
+    const finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * wFrBonus * sessionStats.fireRateMult * weaponFrMult)); 
+    const finalBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal; 
+    const finalSpread = Math.max(0, weapon.spread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0)); 
+    const finalSpeed = 12 * sessionStats.bulletSpeedMult * weaponSpeedMult;
+
     if (frames - lastShotFrame < finalFireRate) return; const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
     for (let i = 0; i < finalBullets; i++) { let fireAngle = baseAngle; if (finalSpread > 0) fireAngle += (Math.random() - 0.5) * finalSpread; bullets.push({ x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, velocity: { x: Math.cos(fireAngle) * finalSpeed, y: Math.sin(fireAngle) * finalSpeed } }); }
     lastShotFrame = frames;
