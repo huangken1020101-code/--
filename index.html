@@ -24,7 +24,7 @@
 
         .overlay h1 { font-size: 48px; margin-bottom: 10px; color: #00d2ff; }
         .overlay p { font-size: 20px; margin-bottom: 20px; text-align: center;}
-        .section-title { color: #ffc107; margin: 20px 0 10px 0; font-size: 24px; font-weight: bold; border-bottom: 2px solid #ffc107; padding-bottom: 5px; width: 400px; text-align: center;}
+        .section-title { color: #ffc107; margin: 20px 0 10px 0; font-size: 24px; font-weight: bold; border-bottom: 2px solid #ffc107; padding-bottom: 5px; width: 500px; text-align: center;}
         .section-title.special { color: #00d2ff; border-bottom-color: #00d2ff; }
         
         .btn-group { display: flex; flex-direction: column; gap: 15px; align-items: center; }
@@ -49,9 +49,9 @@
         button.upgrade-btn span { font-size: 15px; color: #ccc; line-height: 1.4; }
         button:disabled { background: #444 !important; color: #888 !important; cursor: not-allowed; transform: none !important; border-color: transparent !important; }
 
-        .shop-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 10px; width: 450px; display: flex; justify-content: space-between; align-items: center; }
-        .shop-item-info { display: flex; flex-direction: column; gap: 5px; max-width: 280px; }
-        .shop-item-info span:nth-child(2) { font-size: 14px; color: #aaa; line-height: 1.3;}
+        .shop-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 10px; width: 500px; display: flex; justify-content: space-between; align-items: center; }
+        .shop-item-info { display: flex; flex-direction: column; gap: 6px; max-width: 350px; }
+        .shop-item-info span:nth-child(2) { line-height: 1.4; }
         
         #diffSelector { display: none; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 8px; font-size: 20px; }
         #diffSelector button { font-size: 20px; width: 30px; height: 30px; cursor: pointer; background: #333; color: white; border: 1px solid #777;}
@@ -64,7 +64,7 @@
         .prob-row:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); transform: translateX(5px); }
         .prob-row.active { background: rgba(255, 255, 255, 0.15); border-color: #ffc107; }
 
-        #probDetails, #bestiaryContainer { background: rgba(0, 0, 0, 0.7); padding: 20px; border-radius: 10px; border: 1px solid #444; width: 450px; height: 420px; overflow-y: auto; text-align: left; }
+        #probDetails, #bestiaryContainer { background: rgba(0, 0, 0, 0.7); padding: 20px; border-radius: 10px; border: 1px solid #444; width: 480px; height: 420px; overflow-y: auto; text-align: left; }
         #probDetails::-webkit-scrollbar, #bestiaryContainer::-webkit-scrollbar { width: 8px; }
         #probDetails::-webkit-scrollbar-track, #bestiaryContainer::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
         #probDetails::-webkit-scrollbar-thumb, #bestiaryContainer::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
@@ -77,6 +77,7 @@
         .monster-card { background: rgba(255,255,255,0.08); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #555; }
         .monster-card h3 { margin: 0 0 10px 0; font-size: 20px; text-shadow: 0 0 5px currentColor; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; }
         .monster-card .m-stats { display: flex; gap: 15px; margin-bottom: 8px; font-size: 14px; color: #ddd; }
+        .monster-card .m-spawn { font-size: 13px; color: #ffeb3b; margin-bottom: 8px; font-weight: bold; background: rgba(255,235,59,0.1); padding: 5px; border-radius: 4px; display: inline-block;}
         .monster-card .m-desc { font-size: 14px; color: #aaa; line-height: 1.4; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 5px;}
         .monster-locked { text-align: center; color: #666; font-style: italic; padding: 20px; background: rgba(0,0,0,0.5); border-radius: 8px; margin-bottom: 15px; border: 1px dashed #444; }
 
@@ -194,11 +195,34 @@
             </div>
 
             <div id="shopMainSection">
-                <div class="section-title">解鎖武器</div>
+                <div class="section-title">解鎖武器 (基礎數值)</div>
                 <div class="shop-list">
-                    <div class="shop-item"><div class="shop-item-info"><span>基礎手槍</span><span>射速普通 / 威力普通</span></div><button id="btn_pistol" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('pistol')">已裝備</button></div>
-                    <div class="shop-item"><div class="shop-item-info"><span>重型機關槍</span><span>極高射速 / 威力較弱 / 直線連發</span></div><button id="btn_machineGun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('machineGun')">1000 金幣</button></div>
-                    <div class="shop-item"><div class="shop-item-info"><span>戰術散彈槍</span><span>射速緩慢 / 範圍高爆發</span></div><button id="btn_shotgun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 80px;" onclick="buyOrEquip('shotgun')">3000 金幣</button></div>
+                    <div class="shop-item">
+                        <div class="shop-item-info">
+                            <span style="color:#ffff00; font-weight:bold; font-size: 18px;">基礎手槍</span>
+                            <span style="color: #00d2ff; font-size: 14px;">⚔️ 傷害: 1.0 | 🔫 攻速: 3 發/秒<br>💨 彈速: 10 | 🛡️ 基礎血量: 10</span>
+                            <span style="font-size: 13px; color: #aaa; margin-top: 2px;">平均射速 / 威力普通</span>
+                        </div>
+                        <button id="btn_pistol" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 100px;" onclick="buyOrEquip('pistol')">已裝備</button>
+                    </div>
+                    
+                    <div class="shop-item">
+                        <div class="shop-item-info">
+                            <span style="color:#ffaa00; font-weight:bold; font-size: 18px;">重型機關槍</span>
+                            <span style="color: #00d2ff; font-size: 14px;">⚔️ 傷害: 0.6 | 🔫 攻速: 15 發/秒<br>💨 彈速: 10 | 🛡️ 基礎血量: 10</span>
+                            <span style="font-size: 13px; color: #aaa; margin-top: 2px;">極高射速 / 連續點放 / 些微抖動</span>
+                        </div>
+                        <button id="btn_machineGun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 100px;" onclick="buyOrEquip('machineGun')">1000 金幣</button>
+                    </div>
+
+                    <div class="shop-item">
+                        <div class="shop-item-info">
+                            <span style="color:#ff4444; font-weight:bold; font-size: 18px;">戰術散彈槍</span>
+                            <span style="color: #00d2ff; font-size: 14px;">⚔️ 傷害: 1.2 | 🔫 攻速: 1.33 次/秒 (每次5發)<br>💨 彈速: 10 | 🛡️ 基礎血量: 10</span>
+                            <span style="font-size: 13px; color: #aaa; margin-top: 2px;">射速緩慢 / 多發散彈高爆發</span>
+                        </div>
+                        <button id="btn_shotgun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 100px;" onclick="buyOrEquip('shotgun')">3000 金幣</button>
+                    </div>
                 </div>
 
                 <div class="section-title special">目前裝備專屬強化 (<span id="shopCurrentWeaponName"></span>)</div>
@@ -223,7 +247,7 @@
                     <div class="shop-item" style="width: 500px;">
                         <div class="shop-item-info" style="max-width: 320px;">
                             <span style="color:#00d2ff; font-weight:bold; font-size: 20px;">重裝塔盾</span>
-                            <span style="color:#ddd;">切換後：<br>➤ 完全抵禦遠程攻擊 (100% 減免)<br>➤ 大幅削弱近戰衝擊 (50% 減免)</span>
+                            <span style="color:#ddd; margin-top: 5px;">切換後：<br>➤ 完全抵禦遠程攻擊 (100% 減免)<br>➤ 大幅削弱近戰衝擊 (50% 減免)</span>
                         </div>
                         <button id="btn_shield" class="menu-btn" style="padding: 10px 15px; font-size: 18px; min-width: 120px;" onclick="buyOrEquipOffhand('shield')">10000 金幣</button>
                     </div>
@@ -287,29 +311,30 @@ let weaponUpgrades = { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { 
 let upgradeCosts = { fireRate: 50, damage: 100, hp: 200 }; let maxDifficultyUnlocked = 1;
 let selectedDifficulty = 1;
 
-// ★ 武器裝備定義：加入 fireMode 屬性 ('burst' 點放 / 'spread' 散彈)
 const WEAPONS = {
-    pistol: { cost: 0, name: '基礎手槍', fireRate: 30, damage: 1, bullets: 1, spread: 0, color: '#ffff00', fireMode: 'burst' },
-    machineGun: { cost: 1000, name: '重型機關槍', fireRate: 18, damage: 0.6, bullets: 3, spread: 0.05, color: '#ffaa00', fireMode: 'burst' },
-    shotgun: { cost: 3000, name: '戰術散彈槍', fireRate: 60, damage: 1.2, bullets: 5, spread: 0.5, color: '#ff4444', fireMode: 'spread' }
+    pistol: { cost: 0, name: '基礎手槍', fireRate: 20, damage: 1, bullets: 1, spread: 0, color: '#ffff00', fireMode: 'stream' },
+    machineGun: { cost: 1000, name: '重型機關槍', fireRate: 12, damage: 0.6, bullets: 3, spread: 0.25, color: '#ffaa00', fireMode: 'stream' },
+    shotgun: { cost: 3000, name: '戰術散彈槍', fireRate: 45, damage: 1.2, bullets: 5, spread: 0.5, color: '#ff4444', fireMode: 'spread' }
 };
 const OFFHANDS = {
     shield: { cost: 10000, name: '重裝塔盾' }
 };
 
-// 怪物圖鑑資料定義
+// ★ 新增 spawnRule，圖鑑顯示專用
 const MONSTER_DATA = {
-    'normal': { name: '普通感染者', baseHpMulti: 1, baseGold: 2, baseExp: 1, speed: 2.0, color: '#ff4b2b', desc: '最常見的敵人，移動速度普通。靠著數量優勢壓制防線。' },
-    'mini': { name: '巨型突變體', baseHpMulti: 15, baseGold: 50, baseExp: 50, speed: 1.0, color: '#9c27b0', desc: '體型龐大且血量極高的菁英怪，移動速度較慢。' },
-    'big': { name: '首領巨獸', baseHpMulti: 50, baseGold: 200, baseExp: 200, speed: 0.4, color: '#e91e63', desc: '擁有恐怖的血量與「寒冰抗性」。隨著擊殺數增加，抗性最高可達 50%。' },
-    'ranged': { name: '遠程射手', baseHpMulti: 2, baseGold: 5, baseExp: 5, speed: 0.25, color: '#4caf50', desc: '難度二以上出現的特化突變體。移動極其緩慢，但每 3 秒會發射致命的酸液彈。' }
+    'normal': { name: '普通感染者', baseHpMulti: 1, baseGold: 2, baseExp: 1, speed: 2.0, color: '#ff4b2b', spawnRule: '難度 1 以上 / 第 1 波起出現', desc: '最常見的敵人，移動速度普通。靠著數量優勢壓制防線。' },
+    'mini': { name: '巨型突變體', baseHpMulti: 15, baseGold: 50, baseExp: 50, speed: 1.0, color: '#9c27b0', spawnRule: '難度 1 以上 / 每 5 波出現一次', desc: '體型龐大且血量極高的菁英怪，移動速度較慢。' },
+    'big': { name: '首領巨獸', baseHpMulti: 50, baseGold: 200, baseExp: 200, speed: 0.4, color: '#e91e63', spawnRule: '難度 1 以上 / 每 10 波出現一次', desc: '擁有恐怖的血量與「寒冰抗性」。隨著擊殺數增加，抗性最高可達 50%。' },
+    'ranged': { name: '遠程射手', baseHpMulti: 2, baseGold: 5, baseExp: 5, speed: 0.25, color: '#4caf50', spawnRule: '難度 2 以上 / 生成一般怪時 1% 機率突變', desc: '難度二以上出現的特化突變體。移動極其緩慢，但每 3 秒會發射致命的酸液彈。' }
 };
 
 // 單場遊戲狀態
 let currentWave = 1; let isEndless = false; let maxHp = 10; let hp = maxHp;
-let frames = 0; let lastShotFrame = 0; let sessionGold = 0; 
+let frames = 0; 
+let lastShotFrame = 0; 
+let nextShotFrame = 0; 
+let sessionGold = 0; 
 let bullets = []; let enemyBullets = []; let enemies = [];
-let burstQueue = []; // ★ 直線連發射擊佇列
 const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25, color: '#00d2ff' };
 let enemiesToSpawn = []; let waveSpawnInterval = 60; 
 let sessionExp = 0; let sessionLevel = 1; let sessionMaxExp = 10; let sessionStats = {}; 
@@ -415,7 +440,6 @@ function clearGameData() {
 window.addEventListener('beforeunload', saveGameData);
 window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
 
-// 主手 / 副手 切換機制
 window.addEventListener('mousedown', (e) => {
     if (state === 'PLAYING' && e.button === 0) {
         if (currentOffhand !== 'none') { 
@@ -553,8 +577,9 @@ function openShop(fromState) { previousState = fromState; state = 'SHOP'; showMe
 // --- 遊戲邏輯 ---
 function initGame() {
     currentWave = 1; isEndless = false; maxHp = calculateMaxHp(); hp = maxHp;
-    frames = 0; lastShotFrame = 0; sessionGold = 0; sessionExp = 0; sessionLevel = 1; sessionMaxExp = 10;
-    activeSlot = 'main'; burstQueue = [];
+    frames = 0; lastShotFrame = 0; nextShotFrame = 0; 
+    sessionGold = 0; sessionExp = 0; sessionLevel = 1; sessionMaxExp = 10;
+    activeSlot = 'main';
     sessionStats = { damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, frostMagazineLevel: 0, weaponMods: { pistol: { extraBullets: 0, dmgMult: 1.0 }, machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0 } } };
     bullets = []; enemyBullets = []; enemies = []; updateUI(); startWave(); animate();
 }
@@ -569,9 +594,17 @@ function startWave() {
         if (currentWave % 10 === 0) bigCount = 1 + Math.floor((currentWave - 30) / 10); 
     }
     
+    // ★ 遠程射手生成機率改為：取代1%的普通怪
     if (selectedDifficulty >= 2) {
-        rangedCount = Math.floor((currentWave / 3) * (selectedDifficulty - 1));
-        if (rangedCount < 1 && currentWave >= 2) rangedCount = 1;
+        let actualNormal = 0;
+        for (let i = 0; i < normalCount; i++) {
+            if (Math.random() < 0.01) { 
+                rangedCount++; 
+            } else { 
+                actualNormal++; 
+            }
+        }
+        normalCount = actualNormal;
     }
 
     for(let i=0; i<normalCount; i++) enemiesToSpawn.push('normal'); for(let i=0; i<miniCount; i++) enemiesToSpawn.push('mini'); for(let i=0; i<bigCount; i++) enemiesToSpawn.push('big'); for(let i=0; i<rangedCount; i++) enemiesToSpawn.push('ranged');
@@ -586,7 +619,7 @@ function startWave() {
 }
 
 function handleWaveClear() {
-    bullets = []; enemyBullets = []; burstQueue = [];
+    bullets = []; enemyBullets = [];
     if (currentWave === 30 && !isEndless) { 
         if (selectedDifficulty === maxDifficultyUnlocked) {
             maxDifficultyUnlocked++;
@@ -624,6 +657,18 @@ document.getElementById('importSaveBtn').addEventListener('click', () => {
     }
 });
 
+document.getElementById('showProbBtn').addEventListener('click', () => { 
+    state = 'PROB'; 
+    showMenu('prob'); 
+    renderProbabilities(); 
+    renderBestiary();      
+});
+
+document.getElementById('closeProbBtn').addEventListener('click', () => { 
+    state = 'MENU'; 
+    showMenu('main'); 
+});
+
 document.getElementById('probTabUpgBtn').addEventListener('click', () => {
     document.getElementById('probTabUpgBtn').classList.add('active-tab'); document.getElementById('probTabBestiaryBtn').classList.remove('active-tab');
     document.getElementById('probUpgSection').classList.remove('hidden'); document.getElementById('probBestiarySection').classList.add('hidden');
@@ -643,25 +688,22 @@ function renderProbabilities() {
     }); probList.innerHTML = html;
 }
 
-window.showRarityDetails = function(rarityName) {
-    document.querySelectorAll('.prob-row').forEach(el => el.classList.remove('active')); document.getElementById(`prob_row_${rarityName}`).classList.add('active');
-    const detailsBox = document.getElementById('probDetails'); detailsBox.style.display = 'block'; const rColor = RARITIES[rarityName].color; const items = UPGRADE_POOL.filter(u => u.rarity === rarityName);
-    let html = `<h2 style="color: ${rColor}; margin-top: 0; text-shadow: 0 0 5px ${rColor}; border-bottom: 2px solid ${rColor}; padding-bottom: 8px;">✦ ${rarityName} 升級一覽</h2>`;
-    if (items.length === 0) { html += `<p style="color: #aaa; text-align: center; margin-top: 50px;">此稀有度目前沒有專屬升級項目。</p>`; } else { items.forEach(item => { let typeLabel = ''; if (item.type === 'global') typeLabel = '通用能力'; else if (WEAPONS[item.type]) typeLabel = WEAPONS[item.type].name + ' 專屬'; else typeLabel = item.type; html += `<div class="detail-item" style="border-left-color: ${rColor};"><div class="detail-item-title"><span>${item.name}</span><span class="detail-item-type">${typeLabel}</span></div><div class="detail-item-desc">${item.desc}</div></div>`; }); }
-    detailsBox.innerHTML = html;
-};
-
 function renderBestiary() {
     const container = document.getElementById('bestiaryContainer');
     let html = `<div style="font-size: 14px; color: #ccc; margin-bottom: 20px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
-        <strong>公式詳解：</strong><br>
+        <strong>最新公式詳解：</strong><br>
         • 最終血量 = 基礎血量倍率 × (1 + 波數×0.4) × (1 + (難度-1)×0.3)<br>
+        • 一般怪金幣 = 基礎值 × (最終血量 - 基礎倍率) × 難度 × 0.75<br>
+        • 一般怪經驗 = 基礎值 × (最終血量 - 基礎倍率) × 難度 × 1.5<br>
+        • Boss怪金幣 = 基礎值 × (最終血量 / 基礎倍率) × 難度 × 0.38<br>
+        • Boss怪經驗 = 基礎值 × (最終血量 / 基礎倍率) × 難度 × 0.575<br>
         <span style="font-size: 12px; color: #aaa;">(未解鎖的怪物擊殺後才會顯示詳細資訊)</span>
     </div>`;
 
     for (const [key, data] of Object.entries(MONSTER_DATA)) {
         if (defeatedMonsters.includes(key)) {
-            html += `<div class="monster-card"><h3 style="color: ${data.color};">${data.name}</h3><div class="m-stats"><span>🩸 基礎血量: ${data.baseHpMulti} 倍</span><span>💰 掉落金幣: ${data.baseGold}</span><span>✨ 經驗值: ${data.baseExp}</span></div><div class="m-desc">${data.desc}</div></div>`;
+            // ★ 新增 m-spawn 的 div 用來顯示出現條件
+            html += `<div class="monster-card"><h3 style="color: ${data.color};">${data.name}</h3><div class="m-spawn">📍 出現條件：${data.spawnRule}</div><div class="m-stats"><span>🩸 基礎血量: ${data.baseHpMulti} 倍</span><span>💰 基礎金幣: ${data.baseGold}</span><span>✨ 基礎經驗: ${data.baseExp}</span></div><div class="m-desc">${data.desc}</div></div>`;
         } else {
             html += `<div class="monster-locked">??? - 未知突變體 (擊殺後解鎖)</div>`;
         }
@@ -669,8 +711,13 @@ function renderBestiary() {
     container.innerHTML = html;
 }
 
-document.getElementById('showProbBtn').addEventListener('click', () => { state = 'PROB'; renderProbabilities(); document.getElementById('probDetails').style.display = 'block'; document.getElementById('probDetails').innerHTML = '<div style="text-align: center; color: #888; margin-top: 180px; font-size: 18px;">請點擊左側稀有度以查看內容</div>'; showMenu('prob'); });
-document.getElementById('closeProbBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
+window.showRarityDetails = function(rarityName) {
+    document.querySelectorAll('.prob-row').forEach(el => el.classList.remove('active')); document.getElementById(`prob_row_${rarityName}`).classList.add('active');
+    const detailsBox = document.getElementById('probDetails'); detailsBox.style.display = 'block'; const rColor = RARITIES[rarityName].color; const items = UPGRADE_POOL.filter(u => u.rarity === rarityName);
+    let html = `<h2 style="color: ${rColor}; margin-top: 0; text-shadow: 0 0 5px ${rColor}; border-bottom: 2px solid ${rColor}; padding-bottom: 8px;">✦ ${rarityName} 升級一覽</h2>`;
+    if (items.length === 0) { html += `<p style="color: #aaa; text-align: center; margin-top: 50px;">此稀有度目前沒有專屬升級項目。</p>`; } else { items.forEach(item => { let typeLabel = ''; if (item.type === 'global') typeLabel = '通用能力'; else if (WEAPONS[item.type]) typeLabel = WEAPONS[item.type].name + ' 專屬'; else typeLabel = item.type; html += `<div class="detail-item" style="border-left-color: ${rColor};"><div class="detail-item-title"><span>${item.name}</span><span class="detail-item-type">${typeLabel}</span></div><div class="detail-item-desc">${item.desc}</div></div>`; }); }
+    detailsBox.innerHTML = html;
+};
 
 function triggerLevelUp() {
     state = 'LEVELUP'; showMenu('levelup'); updateUI();
@@ -700,45 +747,65 @@ function triggerLevelUp() {
     });
 }
 
-// ★ 直線點放核心邏輯
 function autoAimShoot() {
     if (activeSlot !== 'main') return; 
 
     const weapon = WEAPONS[currentWeapon]; 
-    let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0; let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0; let weaponSpeedMult = sessionStats.weaponMods[currentWeapon]?.speedMult || 1.0;
-    const wUpg = weaponUpgrades[currentWeapon]; const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); const wFrBonus = Math.pow(0.95, wUpg.frLvl - 1);  
+    let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0; 
+    let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0; 
+    let weaponSpeedMult = sessionStats.weaponMods[currentWeapon]?.speedMult || 1.0;
+
+    const wUpg = weaponUpgrades[currentWeapon];
+    const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); 
+    const wFrBonus = Math.pow(0.95, wUpg.frLvl - 1);  
 
     const finalDamage = weapon.damage * globalStats.damageMult * wDmgBonus * sessionStats.damageMult * weaponDmgMult; 
     const finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * wFrBonus * sessionStats.fireRateMult * weaponFrMult)); 
     const finalBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal; 
-    const finalSpread = Math.max(0, weapon.spread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0)); 
-    const finalSpeed = 12 * sessionStats.bulletSpeedMult * weaponSpeedMult;
-
-    if (frames - lastShotFrame < finalFireRate) return; 
     
-    const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
-    const fireMode = weapon.fireMode || 'spread';
+    let currentSpread = weapon.spread;
+    if (currentSpread === 0 && finalBullets > 1) currentSpread = 0.15; 
+    const finalSpread = Math.max(0, currentSpread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0)); 
+    
+    const finalSpeed = 10 * sessionStats.bulletSpeedMult * weaponSpeedMult;
 
-    if (fireMode === 'burst') {
-        let burstAngle = baseAngle; 
-        if (finalSpread > 0) burstAngle += (Math.random() - 0.5) * finalSpread; 
+    const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+    const fireMode = weapon.fireMode || 'stream';
+
+    if (fireMode === 'stream') {
+        const averageInterval = Math.max(1, Math.floor(finalFireRate / finalBullets));
         
-        let delayBetweenBullets = 3; 
-        for (let i = 0; i < finalBullets; i++) { 
-            burstQueue.push({
-                delayFrames: i * delayBetweenBullets,
-                radius: 6, color: weapon.color, damage: finalDamage,
-                velocity: { x: Math.cos(burstAngle) * finalSpeed, y: Math.sin(burstAngle) * finalSpeed }
-            });
+        if (frames >= nextShotFrame) {
+            const randomScatterAngle = baseAngle + (Math.random() - 0.5) * finalSpread;
+            
+            bullets.push({ 
+                x: player.x, 
+                y: player.y, 
+                radius: 6, 
+                color: weapon.color, 
+                damage: finalDamage, 
+                velocity: { 
+                    x: Math.cos(randomScatterAngle) * finalSpeed, 
+                    y: Math.sin(randomScatterAngle) * finalSpeed 
+                } 
+            }); 
+            nextShotFrame = frames + averageInterval;
         }
     } else {
-        for (let i = 0; i < finalBullets; i++) { 
-            let fireAngle = baseAngle; 
-            if (finalSpread > 0) fireAngle += (Math.random() - 0.5) * finalSpread; 
-            bullets.push({ x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, velocity: { x: Math.cos(fireAngle) * finalSpeed, y: Math.sin(fireAngle) * finalSpeed } }); 
+        if (frames - lastShotFrame >= finalFireRate) {
+            for (let i = 0; i < finalBullets; i++) { 
+                let fireAngle = baseAngle; 
+                if (finalSpread > 0) fireAngle += (Math.random() - 0.5) * finalSpread; 
+                
+                bullets.push({ 
+                    x: player.x, y: player.y, radius: 6, color: weapon.color, 
+                    damage: finalDamage, 
+                    velocity: { x: Math.cos(fireAngle) * finalSpeed, y: Math.sin(fireAngle) * finalSpeed } 
+                }); 
+            }
+            lastShotFrame = frames;
         }
     }
-    lastShotFrame = frames;
 }
 
 function spawnSpecificEnemy(type) {
@@ -756,8 +823,20 @@ function spawnSpecificEnemy(type) {
         let bossIndex = Math.floor(currentWave / 10); if (bossIndex < 1) bossIndex = 1;
         frostRes = 0.01 + (bossIndex - 1) * (0.49 / 99); frostRes = Math.min(0.99, Math.max(0, frostRes)); 
     }
+
+    let customGold, customExp;
     
-    enemies.push({ x, y, radius, color: data.color, hp: baseHp, maxHp: baseHp, goldValue: data.baseGold, expValue: data.baseExp, type, velocity: { x: Math.cos(angle) * data.speed, y: Math.sin(angle) * data.speed }, slowStacks: 0, frostRes: frostRes, shootTimer: 0 });
+    if (type === 'big') {
+        let hpRatio = baseHp / data.baseHpMulti;
+        customGold = Math.max(1, Math.floor(data.baseGold * hpRatio * selectedDifficulty * (1.15 / 3)));
+        customExp = Math.max(1, Math.floor(data.baseExp * hpRatio * selectedDifficulty * 0.575)); 
+    } else {
+        let hpDiff = Math.max(0.1, baseHp - data.baseHpMulti);
+        customGold = Math.max(1, Math.floor(data.baseGold * hpDiff * selectedDifficulty * 0.75)); 
+        customExp = Math.max(1, Math.floor(data.baseExp * hpDiff * selectedDifficulty * 1.5)); 
+    }
+    
+    enemies.push({ x, y, radius, color: data.color, hp: baseHp, maxHp: baseHp, goldValue: customGold, expValue: customExp, type, velocity: { x: Math.cos(angle) * data.speed, y: Math.sin(angle) * data.speed }, slowStacks: 0, frostRes: frostRes, shootTimer: 0 });
 }
 
 function animate() {
@@ -765,20 +844,6 @@ function animate() {
     ctx.fillStyle = 'rgba(26, 26, 26, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
     
     autoAimShoot();
-
-    // ★ 處理射擊佇列 (連線三發的關鍵)
-    for (let i = burstQueue.length - 1; i >= 0; i--) {
-        let bq = burstQueue[i];
-        if (bq.delayFrames <= 0) {
-            bullets.push({ 
-                x: player.x, y: player.y, 
-                radius: bq.radius, color: bq.color, damage: bq.damage, velocity: bq.velocity 
-            });
-            burstQueue.splice(i, 1);
-        } else {
-            bq.delayFrames--;
-        }
-    }
 
     const aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x); 
     if (activeSlot === 'main') {
@@ -848,7 +913,7 @@ function animate() {
                 
                 if (enemy.hp <= 0) {
                     if (!defeatedMonsters.includes(enemy.type)) { defeatedMonsters.push(enemy.type); saveGameData(); }
-                    enemies.splice(eIndex, 1); let finalGold = Math.floor(enemy.goldValue * sessionStats.goldBonus); gold += finalGold; sessionGold += finalGold; sessionExp += enemy.expValue; shouldCheckLevelUp = true; updateUI(); break; 
+                    enemies.splice(eIndex, 1); let finalGold = Math.floor(enemy.goldValue * sessionStats.goldBonus); gold += finalGold; sessionGold += finalGold; sessionExp += Math.floor(enemy.expValue); shouldCheckLevelUp = true; updateUI(); break; 
                 }
             }
         }
@@ -875,6 +940,7 @@ function animate() {
 
     if (frames % waveSpawnInterval === 0 && enemiesToSpawn.length > 0) { let type = enemiesToSpawn.shift(); spawnSpecificEnemy(type); }
     if (enemiesToSpawn.length === 0 && enemies.length === 0 && hp > 0) { handleWaveClear(); return; }
+    
     if (shouldCheckLevelUp && sessionExp >= sessionMaxExp) { sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp(); }
     frames++;
 }
