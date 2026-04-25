@@ -218,10 +218,10 @@
                     <div class="shop-item">
                         <div class="shop-item-info">
                             <span style="color:#ff4444; font-weight:bold; font-size: 18px;">戰術散彈槍</span>
-                            <span style="color: #00d2ff; font-size: 14px;">⚔️ 傷害: 1.2 | 🔫 攻速: 1.33 次/秒 (每次5發)<br>💨 彈速: 10 | 🛡️ 基礎血量: 10</span>
+                            <span style="color: #00d2ff; font-size: 14px;">⚔️ 傷害: 2.5 | 🔫 攻速: 1.33 次/秒 (每次5發)<br>💨 彈速: 10 | 🛡️ 基礎血量: 10</span>
                             <span style="font-size: 13px; color: #aaa; margin-top: 2px;">射速緩慢 / 多發散彈高爆發</span>
                         </div>
-                        <button id="btn_shotgun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 100px;" onclick="buyOrEquip('shotgun')">3000 金幣</button>
+                        <button id="btn_shotgun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 100px;" onclick="buyOrEquip('shotgun')">10000 金幣</button>
                     </div>
                 </div>
 
@@ -314,13 +314,12 @@ let selectedDifficulty = 1;
 const WEAPONS = {
     pistol: { cost: 0, name: '基礎手槍', fireRate: 20, damage: 1, bullets: 1, spread: 0, color: '#ffff00', fireMode: 'stream' },
     machineGun: { cost: 1000, name: '重型機關槍', fireRate: 12, damage: 0.6, bullets: 3, spread: 0.25, color: '#ffaa00', fireMode: 'stream' },
-    shotgun: { cost: 3000, name: '戰術散彈槍', fireRate: 45, damage: 1.2, bullets: 5, spread: 0.5, color: '#ff4444', fireMode: 'spread' }
+    shotgun: { cost: 10000, name: '戰術散彈槍', fireRate: 45, damage: 2.5, bullets: 5, spread: 0.5, color: '#ff4444', fireMode: 'spread' }
 };
 const OFFHANDS = {
     shield: { cost: 10000, name: '重裝塔盾' }
 };
 
-// ★ 新增 spawnRule，圖鑑顯示專用
 const MONSTER_DATA = {
     'normal': { name: '普通感染者', baseHpMulti: 1, baseGold: 2, baseExp: 1, speed: 2.0, color: '#ff4b2b', spawnRule: '難度 1 以上 / 第 1 波起出現', desc: '最常見的敵人，移動速度普通。靠著數量優勢壓制防線。' },
     'mini': { name: '巨型突變體', baseHpMulti: 15, baseGold: 50, baseExp: 50, speed: 1.0, color: '#9c27b0', spawnRule: '難度 1 以上 / 每 5 波出現一次', desc: '體型龐大且血量極高的菁英怪，移動速度較慢。' },
@@ -367,7 +366,7 @@ const UPGRADE_POOL = [
     { id: 'w_pistol_2', name: '手槍：致命瞄準', desc: '手槍傷害獨立提升 50%', type: 'pistol', rarity: '獨家', action: () => { sessionStats.weaponMods.pistol.dmgMult += 0.50; } },
     { id: 'w_machinegun_1', name: '機槍：穩定握把', desc: '機關槍降低散射', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.spreadReduction += 0.08; } },
     { id: 'w_machinegun_2', name: '機槍：過載引擎', desc: '機關槍射速獨立提升 30%', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.fireRateMult *= 0.70; } },
-    { id: 'w_shotgun_1', name: '散彈：密集彈雨', desc: '散彈槍發射彈丸數量 +2', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.extraBullets += 2; } },
+    { id: 'w_shotgun_1', name: '散彈：密集彈雨', desc: '散彈槍發射彈丸數量 × 1.5 (四捨五入)', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.bulletMult *= 1.5; } },
     { id: 'w_shotgun_2', name: '散彈：龍息彈', desc: '散彈子彈速度+30%，傷害+20%', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.speedMult += 0.30; sessionStats.weaponMods.shotgun.dmgMult += 0.20; } }
 ];
 
@@ -580,7 +579,7 @@ function initGame() {
     frames = 0; lastShotFrame = 0; nextShotFrame = 0; 
     sessionGold = 0; sessionExp = 0; sessionLevel = 1; sessionMaxExp = 10;
     activeSlot = 'main';
-    sessionStats = { damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, frostMagazineLevel: 0, weaponMods: { pistol: { extraBullets: 0, dmgMult: 1.0 }, machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0 } } };
+    sessionStats = { damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, frostMagazineLevel: 0, weaponMods: { pistol: { extraBullets: 0, dmgMult: 1.0 }, machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0, bulletMult: 1.0 } } };
     bullets = []; enemyBullets = []; enemies = []; updateUI(); startWave(); animate();
 }
 
@@ -594,7 +593,6 @@ function startWave() {
         if (currentWave % 10 === 0) bigCount = 1 + Math.floor((currentWave - 30) / 10); 
     }
     
-    // ★ 遠程射手生成機率改為：取代1%的普通怪
     if (selectedDifficulty >= 2) {
         let actualNormal = 0;
         for (let i = 0; i < normalCount; i++) {
@@ -702,7 +700,6 @@ function renderBestiary() {
 
     for (const [key, data] of Object.entries(MONSTER_DATA)) {
         if (defeatedMonsters.includes(key)) {
-            // ★ 新增 m-spawn 的 div 用來顯示出現條件
             html += `<div class="monster-card"><h3 style="color: ${data.color};">${data.name}</h3><div class="m-spawn">📍 出現條件：${data.spawnRule}</div><div class="m-stats"><span>🩸 基礎血量: ${data.baseHpMulti} 倍</span><span>💰 基礎金幣: ${data.baseGold}</span><span>✨ 基礎經驗: ${data.baseExp}</span></div><div class="m-desc">${data.desc}</div></div>`;
         } else {
             html += `<div class="monster-locked">??? - 未知突變體 (擊殺後解鎖)</div>`;
@@ -761,7 +758,11 @@ function autoAimShoot() {
 
     const finalDamage = weapon.damage * globalStats.damageMult * wDmgBonus * sessionStats.damageMult * weaponDmgMult; 
     const finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * wFrBonus * sessionStats.fireRateMult * weaponFrMult)); 
-    const finalBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal; 
+    
+    // 計算發射子彈數量（包含額外發射量以及散彈槍的 1.5 倍加成）
+    let baseBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal;
+    let bulletMult = sessionStats.weaponMods[currentWeapon]?.bulletMult || 1.0;
+    const finalBullets = Math.round(baseBullets * bulletMult);
     
     let currentSpread = weapon.spread;
     if (currentSpread === 0 && finalBullets > 1) currentSpread = 0.15; 
