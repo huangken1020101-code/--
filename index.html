@@ -15,12 +15,15 @@
         #ui div { margin-bottom: 5px; }
         #topCenterUI { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 24px; font-weight: bold; display: none; background: rgba(0, 0, 0, 0.6); padding: 10px 30px; border-radius: 8px; border: 2px solid #ffc107; text-align: center;}
         
+        /* 多人連線狀態顯示 */
+        #multiplayerHud { position: absolute; top: 10px; right: 10px; display: none; background: rgba(0, 0, 0, 0.6); padding: 10px; border-radius: 8px; border: 1px solid #00d2ff; color: white; font-size: 16px; text-align: right; pointer-events: none;}
+
         #pauseBtn { pointer-events: auto; margin-top: 10px; padding: 5px 15px; background: #ffc107; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; }
 
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
         
-        #shopMenu, #probMenu { justify-content: flex-start; padding: 40px 0; overflow-y: auto; background: rgba(20, 20, 30, 0.95); }
-        #shopContainer, #probContainerBox { display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; width: 100%; }
+        #shopMenu, #probMenu, #multiplayerMenu, #lobbyMenu { justify-content: flex-start; padding: 40px 0; overflow-y: auto; background: rgba(20, 20, 30, 0.95); }
+        #shopContainer, #probContainerBox, .container-box { display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; width: 100%; }
 
         .overlay h1 { font-size: 48px; margin-bottom: 10px; color: #00d2ff; }
         .overlay p { font-size: 20px; margin-bottom: 20px; text-align: center;}
@@ -31,15 +34,15 @@
         .row-group { display: flex; gap: 15px; justify-content: center; align-items: center; margin-bottom: 15px;}
         
         button.menu-btn { padding: 12px 40px; font-size: 20px; cursor: pointer; background: #00d2ff; color: #111; border: none; border-radius: 5px; font-weight: bold; transition: 0.2s; min-width: 250px; text-align: center; }
-        button.menu-btn:hover { background: #00a8cc; transform: scale(1.05); }
+        button.menu-btn:hover:not(:disabled) { background: #00a8cc; transform: scale(1.05); }
         button.secondary-btn { background: #666; color: white; }
-        button.secondary-btn:hover { background: #888; }
+        button.secondary-btn:hover:not(:disabled) { background: #888; }
         button.shop-btn { background: #e91e63; color: white; }
-        button.shop-btn:hover { background: #c2185b; }
+        button.shop-btn:hover:not(:disabled) { background: #c2185b; }
         button.danger-btn { background: #f44336; color: white; }
-        button.danger-btn:hover { background: #d32f2f; }
+        button.danger-btn:hover:not(:disabled) { background: #d32f2f; }
         button.victory-btn { background: #4caf50; color: white; }
-        button.victory-btn:hover { background: #388e3c; }
+        button.victory-btn:hover:not(:disabled) { background: #388e3c; }
         button.tab-btn { background: #333; color: #aaa; border: 2px solid #555; padding: 10px 30px; }
         button.tab-btn.active-tab { background: #ffc107; color: #111; border-color: #ffc107; transform: scale(1.05); }
         
@@ -101,6 +104,11 @@
         <div style="font-size: 16px; font-weight: normal; color: #ddd;">難度: <span id="diffHudDisplay">1</span></div>
     </div>
 
+    <div id="multiplayerHud">
+        <div style="color: #ffc107; font-weight: bold; margin-bottom: 5px;">👥 連線成員 (<span id="mpCountHud">1</span>/12)</div>
+        <div id="mpPlayerListHud" style="font-size: 14px; color: #aaa;"></div>
+    </div>
+
     <div id="loginMenu" class="overlay">
         <h1 style="color: #ffc107;">☁️ 雲端身分驗證</h1>
         <p>請輸入您的學校或個人帳號，遊戲將自動同步您的雲端存檔</p>
@@ -126,7 +134,8 @@
         </div>
 
         <div class="btn-group">
-            <button id="startBtn" class="menu-btn">開始出擊</button>
+            <button id="startBtn" class="menu-btn">單機模式出擊</button>
+            <button id="multiplayerBtn" class="menu-btn" style="background: #9c27b0; color: white;">🌍 多人連線大廳</button>
             <button id="toShopBtn" class="menu-btn shop-btn">軍火庫 (永久升級)</button>
             <div class="row-group" style="margin-bottom: 0;">
                 <button id="exportSaveBtn" class="menu-btn secondary-btn" style="min-width: 140px; font-size: 16px; padding: 8px;">📤 匯出備份</button>
@@ -135,6 +144,43 @@
             <div class="row-group" style="margin-bottom: 0;">
                 <button id="showProbBtn" class="menu-btn" style="background: #9c27b0; color: white; min-width: 150px; font-size: 16px; padding: 8px;">📊 圖鑑與機率表</button>
                 <button id="clearSaveBtn" class="menu-btn danger-btn" style="min-width: 150px; font-size: 16px; padding: 8px;">刪除雲端紀錄</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="multiplayerMenu" class="overlay hidden">
+        <div class="container-box">
+            <h1 style="color: #9c27b0;">🌍 連線大廳</h1>
+            <div class="row-group" style="margin-bottom: 20px;">
+                <button id="createRoomBtn" class="menu-btn shop-btn" style="min-width: 200px;">➕ 創建房間</button>
+                <button id="refreshRoomsBtn" class="menu-btn secondary-btn" style="min-width: 150px;">🔄 刷新 (<span id="refreshTimer">10</span>s)</button>
+            </div>
+            <div class="section-title">可加入的房間</div>
+            <div id="roomListContainer" style="height: 400px; overflow-y: auto; padding: 10px; width: 650px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                </div>
+            <br><button id="backToMainFromMp" class="menu-btn secondary-btn">返回主頁</button>
+        </div>
+    </div>
+
+    <div id="lobbyMenu" class="overlay hidden">
+        <div class="container-box">
+            <h1>戰鬥準備</h1>
+            <p style="color: #ffc107; font-size: 20px;">房主: <span id="lobbyHostDisplay"></span></p>
+            
+            <div class="row-group" style="margin-bottom: 10px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px;">
+                <span style="font-size: 18px; color: #ddd;">難度設定: </span>
+                <button id="lobbyDiffMinus" class="menu-btn secondary-btn" style="min-width:40px; padding: 5px;">-</button>
+                <span id="lobbyDiffDisplay" style="font-size: 28px; color: #00d2ff; font-weight: bold; margin: 0 15px;">1</span>
+                <button id="lobbyDiffPlus" class="menu-btn secondary-btn" style="min-width:40px; padding: 5px;">+</button>
+            </div>
+            <div id="lobbyDiffWarning" style="color: #f44336; font-size: 16px; margin-bottom: 15px; height: 20px;"></div>
+
+            <div style="background: rgba(0,0,0,0.5); border: 1px solid #555; border-radius: 8px; width: 500px; padding: 15px; min-height: 200px; margin-bottom: 20px;" id="lobbyPlayerList">
+                </div>
+
+            <div class="row-group">
+                <button id="lobbyStartBtn" class="menu-btn" disabled>開始戰鬥 (需至少2人)</button>
+                <button id="lobbyLeaveBtn" class="menu-btn danger-btn">離開房間</button>
             </div>
         </div>
     </div>
@@ -291,7 +337,18 @@ const ctx = canvas.getContext('2d');
 const ui = document.getElementById('ui');
 const topCenterUI = document.getElementById('topCenterUI');
 
-const menus = { login: document.getElementById('loginMenu'), main: document.getElementById('mainMenu'), pause: document.getElementById('pauseMenu'), shop: document.getElementById('shopMenu'), over: document.getElementById('gameOverMenu'), levelup: document.getElementById('levelUpMenu'), victory: document.getElementById('victoryMenu'), prob: document.getElementById('probMenu') };
+const menus = { 
+    login: document.getElementById('loginMenu'), 
+    main: document.getElementById('mainMenu'), 
+    pause: document.getElementById('pauseMenu'), 
+    shop: document.getElementById('shopMenu'), 
+    over: document.getElementById('gameOverMenu'), 
+    levelup: document.getElementById('levelUpMenu'), 
+    victory: document.getElementById('victoryMenu'), 
+    prob: document.getElementById('probMenu'),
+    mpMenu: document.getElementById('multiplayerMenu'),
+    lobby: document.getElementById('lobbyMenu')
+};
 
 const RARITIES = { '普通': { color: '#ffffff', weight: 100 }, '常見': { color: '#4caf50', weight: 70 }, '稀有': { color: '#00d2ff', weight: 35 }, '史詩': { color: '#b145e9', weight: 15 }, '傳奇': { color: '#ff9800', weight: 5 }, '神話': { color: '#ff4444', weight: 2 }, '神聖': { color: '#ffeb3b', weight: 0.5 }, '獨家': { color: '#ff00ff', weight: 50 } };
 
@@ -310,6 +367,19 @@ let globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLv
 let weaponUpgrades = { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } };
 let upgradeCosts = { fireRate: 50, damage: 100, hp: 200 }; let maxDifficultyUnlocked = 1;
 let selectedDifficulty = 1;
+
+// --- 多人連線專屬變數 ---
+let isMultiplayer = false;
+let isHost = false;
+let currentRoomId = null;
+let roomData = null; 
+let roomPlayers = {}; 
+let unsubscribeRoom = null;
+let syncIntervalTimer = null;
+let autoRefreshTimer = null; 
+let refreshCountdown = 10;
+let mpOtherPlayersState = {};
+let isMouseDown = false;
 
 const WEAPONS = {
     pistol: { cost: 0, name: '基礎手槍', fireRate: 20, damage: 1, bullets: 1, spread: 0, color: '#ffff00', fireMode: 'stream' },
@@ -330,8 +400,8 @@ const MONSTER_DATA = {
 // 單場遊戲狀態
 let currentWave = 1; let isEndless = false; let maxHp = 10; let hp = maxHp;
 let frames = 0; 
-let lastShotFrame = 0; 
-let nextShotFrame = 0; 
+let myLastShotFrame = 0; 
+let myNextShotFrame = 0; 
 let sessionGold = 0; 
 let bullets = []; let enemyBullets = []; let enemies = [];
 const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25, color: '#00d2ff' };
@@ -374,13 +444,23 @@ const UPGRADE_POOL = [
 // 2. 雲端存檔與帳號系統 
 // ==========================================
 let currentUser = localStorage.getItem('towerDefenseUser_email');
+let userKey = currentUser ? currentUser.replace(/\./g, '_') : '';
 
-function checkLogin() { if (currentUser) { state = 'MENU'; showMenu('main'); } else { state = 'LOGIN'; showMenu('login'); } }
+function checkLogin() { 
+    if (currentUser) { 
+        state = 'MENU'; showMenu('main'); 
+        userKey = currentUser.replace(/\./g, '_'); 
+    } else { 
+        state = 'LOGIN'; showMenu('login'); 
+    } 
+}
 
 document.getElementById('loginBtn').addEventListener('click', async () => {
     const email = document.getElementById('emailInput').value.trim().toLowerCase();
     if (email.endsWith('@st.tc.edu.tw') || email.endsWith('@gmail.com')) {
-        localStorage.setItem('towerDefenseUser_email', email); currentUser = email; document.getElementById('loginError').style.display = 'none';
+        localStorage.setItem('towerDefenseUser_email', email); currentUser = email; 
+        userKey = email.replace(/\./g, '_'); 
+        document.getElementById('loginError').style.display = 'none';
         checkLogin(); await loadGameData(); 
     } else { document.getElementById('loginError').style.display = 'block'; }
 });
@@ -389,7 +469,7 @@ document.getElementById('logoutBtn').addEventListener('click', (e) => { e.preven
 
 async function loadGameData() {
     if (!currentUser) return;
-    document.getElementById('currentUserDisplay').innerText = `☁️ 連線中: ${currentUser}...`; document.getElementById('startBtn').disabled = true;
+    document.getElementById('currentUserDisplay').innerText = `☁️ 連線中: ${currentUser}...`; document.getElementById('startBtn').disabled = true; document.getElementById('multiplayerBtn').disabled = true;
 
     try {
         const docSnap = await db.collection("saves").doc(currentUser).get();
@@ -414,7 +494,7 @@ async function loadGameData() {
     } catch (e) { console.error("雲端讀取失敗:", e); alert("雲端連線失敗，請檢查網路連線！"); }
 
     upgradeCosts.fireRate = Math.floor(50 * Math.pow(1.5, globalStats.fireRateLvl - 1)); upgradeCosts.damage = Math.floor(100 * Math.pow(1.5, globalStats.damageLvl - 1)); upgradeCosts.hp = Math.floor(200 * Math.pow(1.5, globalStats.hpLvl - 1));
-    document.getElementById('startBtn').disabled = false; document.getElementById('currentUserDisplay').innerText = `👤 目前指揮官: ${currentUser}`;
+    document.getElementById('startBtn').disabled = false; document.getElementById('multiplayerBtn').disabled = false; document.getElementById('currentUserDisplay').innerText = `👤 目前指揮官: ${currentUser}`;
     
     if (maxDifficultyUnlocked > 1) document.getElementById('shopTabOffhandBtn').classList.remove('hidden');
     
@@ -440,6 +520,7 @@ window.addEventListener('beforeunload', saveGameData);
 window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
 
 window.addEventListener('mousedown', (e) => {
+    isMouseDown = true;
     if (state === 'PLAYING' && e.button === 0) {
         if (currentOffhand !== 'none') { 
             activeSlot = (activeSlot === 'main') ? 'offhand' : 'main';
@@ -447,6 +528,7 @@ window.addEventListener('mousedown', (e) => {
         }
     }
 });
+window.addEventListener('mouseup', () => { isMouseDown = false; });
 
 function updateMainMenuDiffUI() {
     if (maxDifficultyUnlocked > 1) { document.getElementById('diffSelector').style.display = 'flex'; document.getElementById('diffDisplay').innerText = selectedDifficulty; }
@@ -494,9 +576,121 @@ function updateUI() {
         slotDisplay.style.color = '#4caf50';
     }
     
-    let waveText = isEndless ? `無盡模式 第 ${currentWave} 波` : `第 ${currentWave} 波`;
-    document.getElementById('waveTitle').innerText = waveText; document.getElementById('diffHudDisplay').innerText = selectedDifficulty;
+    if(isMultiplayer && roomPlayers) {
+        document.getElementById('multiplayerHud').style.display = 'block';
+        document.getElementById('mpCountHud').innerText = Object.keys(roomPlayers).length;
+        let pText = ""; Object.values(roomPlayers).forEach(p => pText += `<div>${p.email.split('@')[0]} (${WEAPONS[p.weapon].name})</div>`);
+        document.getElementById('mpPlayerListHud').innerHTML = pText;
+        document.getElementById('waveTitle').innerText = `🌍 多人連線 - 第 ${currentWave} 波`;
+    } else {
+        document.getElementById('multiplayerHud').style.display = 'none';
+        let waveText = isEndless ? `無盡模式 第 ${currentWave} 波` : `第 ${currentWave} 波`;
+        document.getElementById('waveTitle').innerText = waveText; 
+    }
+    document.getElementById('diffHudDisplay').innerText = selectedDifficulty;
 }
+
+// ==========================================
+// --- 多人連線大廳邏輯 ---
+// ==========================================
+document.getElementById('multiplayerBtn').addEventListener('click', () => {
+    state = 'MP_MENU'; showMenu('mpMenu'); fetchRoomList();
+    autoRefreshTimer = setInterval(() => {
+        refreshCountdown--; document.getElementById('refreshTimer').innerText = refreshCountdown;
+        if(refreshCountdown <= 0) { fetchRoomList(); refreshCountdown = 10; }
+    }, 1000);
+});
+
+document.getElementById('backToMainFromMp').addEventListener('click', () => { clearInterval(autoRefreshTimer); state = 'MENU'; showMenu('main'); });
+document.getElementById('refreshRoomsBtn').addEventListener('click', () => { fetchRoomList(); refreshCountdown = 10; document.getElementById('refreshTimer').innerText = refreshCountdown; });
+
+async function fetchRoomList() {
+    const container = document.getElementById('roomListContainer'); container.innerHTML = '<p style="color:#aaa; text-align:center;">讀取中...</p>';
+    try {
+        const snapshot = await db.collection('rooms').where('status', '==', 'waiting').get();
+        if (snapshot.empty) { container.innerHTML = '<p style="color:#aaa; text-align:center;">目前沒有開放的房間，自己建立一個吧！</p>'; return; }
+        let html = '';
+        snapshot.forEach(doc => {
+            const r = doc.data(); const pCount = Object.keys(r.players).length;
+            let joinBtn = `<button class="menu-btn" style="min-width: 100px; padding: 8px;" onclick="joinRoom('${doc.id}')">加入</button>`;
+            if (pCount >= 12) joinBtn = `<button class="menu-btn secondary-btn" style="min-width: 100px; padding: 8px;" disabled>客滿</button>`;
+            else if (maxDifficultyUnlocked < r.difficulty) joinBtn = `<button class="menu-btn danger-btn" style="min-width: 100px; padding: 8px;" disabled>難度不足</button>`;
+            
+            html += `<div style="background: rgba(255,255,255,0.1); padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid #444;"><div><span style="font-size:20px; font-weight:bold; color:#00d2ff;">房主: ${r.host}</span><br><span style="font-size:14px; color:#aaa;">難度: ${r.difficulty} | 人數: ${pCount}/12</span></div>${joinBtn}</div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) { container.innerHTML = '<p style="color:red; text-align:center;">連線錯誤</p>'; }
+}
+
+document.getElementById('createRoomBtn').addEventListener('click', async () => {
+    isMultiplayer = true; isHost = true; const newRoomRef = db.collection('rooms').doc(); currentRoomId = newRoomRef.id;
+    await newRoomRef.set({
+        host: currentUser, status: 'waiting', difficulty: selectedDifficulty, wave: 1,
+        players: { [userKey]: { email: currentUser, maxDiff: maxDifficultyUnlocked, angle: 0, weapon: currentWeapon, isShooting: false } }
+    });
+    enterLobby();
+});
+
+window.joinRoom = async function(rId) {
+    isMultiplayer = true; isHost = false; currentRoomId = rId;
+    await db.collection('rooms').doc(rId).update({ [`players.${userKey}`]: { email: currentUser, maxDiff: maxDifficultyUnlocked, angle: 0, weapon: currentWeapon, isShooting: false } });
+    enterLobby();
+};
+
+function enterLobby() {
+    clearInterval(autoRefreshTimer); state = 'LOBBY'; showMenu('lobby');
+    document.getElementById('lobbyHostDisplay').innerText = isHost ? currentUser : "連線中...";
+    
+    unsubscribeRoom = db.collection('rooms').doc(currentRoomId).onSnapshot(doc => {
+        if (!doc.exists) { leaveRoom(true); return; }
+        roomData = doc.data(); roomPlayers = roomData.players;
+        document.getElementById('lobbyHostDisplay').innerText = roomData.host;
+        document.getElementById('lobbyDiffDisplay').innerText = roomData.difficulty;
+        
+        let pListHtml = ''; let maxAllowedDiff = 999;
+        Object.values(roomPlayers).forEach(p => {
+            let crown = p.email === roomData.host ? '<span style="color: #ffeb3b; font-weight: bold; margin-right: 5px;">👑</span>' : '';
+            pListHtml += `<div style="display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px dashed #444; font-size: 18px;"><span>${crown}${p.email}</span><span style="color:#aaa; font-size:14px;">最高難度解鎖: ${p.maxDiff}</span></div>`;
+            if(p.maxDiff < maxAllowedDiff) maxAllowedDiff = p.maxDiff;
+        });
+        document.getElementById('lobbyPlayerList').innerHTML = pListHtml;
+
+        if (isHost) {
+            document.getElementById('lobbyDiffMinus').disabled = false; document.getElementById('lobbyDiffPlus').disabled = false;
+            document.getElementById('lobbyStartBtn').disabled = (Object.keys(roomPlayers).length < 2); // 需要 >= 2 人
+            if (roomData.difficulty > maxAllowedDiff) {
+                db.collection('rooms').doc(currentRoomId).update({ difficulty: maxAllowedDiff });
+                document.getElementById('lobbyDiffWarning').innerText = `⚠️ 配合隊伍限制，難度已強制降至 ${maxAllowedDiff}`;
+            } else { document.getElementById('lobbyDiffWarning').innerText = ''; }
+        } else {
+            document.getElementById('lobbyDiffMinus').disabled = true; document.getElementById('lobbyDiffPlus').disabled = true;
+            document.getElementById('lobbyStartBtn').disabled = true; document.getElementById('lobbyStartBtn').innerText = "等待房主開始";
+        }
+
+        if (roomData.status === 'playing' && state === 'LOBBY') { selectedDifficulty = roomData.difficulty; initGame(); }
+        // 戰鬥中同步波數
+        if (state === 'PLAYING' && !isHost && roomData.wave > currentWave) { currentWave = roomData.wave; startWave(); }
+    });
+}
+
+document.getElementById('lobbyDiffMinus').addEventListener('click', () => { if(isHost && roomData.difficulty > 1) db.collection('rooms').doc(currentRoomId).update({ difficulty: roomData.difficulty - 1 }); });
+document.getElementById('lobbyDiffPlus').addEventListener('click', () => { if(isHost) { let maxDiff = Math.min(...Object.values(roomPlayers).map(p=>p.maxDiff)); if(roomData.difficulty < maxDiff) db.collection('rooms').doc(currentRoomId).update({ difficulty: roomData.difficulty + 1 }); } });
+
+document.getElementById('lobbyLeaveBtn').addEventListener('click', () => leaveRoom(false));
+document.getElementById('lobbyStartBtn').addEventListener('click', () => { if(isHost) db.collection('rooms').doc(currentRoomId).update({ status: 'playing' }); });
+
+async function leaveRoom(wasKicked = false) {
+    if (unsubscribeRoom) unsubscribeRoom();
+    if (currentRoomId && roomData) {
+        if (isHost) { await db.collection('rooms').doc(currentRoomId).delete(); } 
+        else { await db.collection('rooms').doc(currentRoomId).update({ [`players.${userKey}`]: firebase.firestore.FieldValue.delete() }); }
+    }
+    isMultiplayer = false; isHost = false; currentRoomId = null; roomData = null;
+    if(syncIntervalTimer) clearInterval(syncIntervalTimer);
+    if(wasKicked) alert("房間已關閉或連線中斷。");
+    state = 'MP_MENU'; showMenu('mpMenu'); fetchRoomList();
+}
+
 
 // --- 商店 UI 邏輯 ---
 document.getElementById('shopTabMainBtn').addEventListener('click', () => {
@@ -576,11 +770,24 @@ function openShop(fromState) { previousState = fromState; state = 'SHOP'; showMe
 // --- 遊戲邏輯 ---
 function initGame() {
     currentWave = 1; isEndless = false; maxHp = calculateMaxHp(); hp = maxHp;
-    frames = 0; lastShotFrame = 0; nextShotFrame = 0; 
+    frames = 0; myLastShotFrame = 0; myNextShotFrame = 0; 
     sessionGold = 0; sessionExp = 0; sessionLevel = 1; sessionMaxExp = 10;
     activeSlot = 'main';
     sessionStats = { damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, frostMagazineLevel: 0, weaponMods: { pistol: { extraBullets: 0, dmgMult: 1.0 }, machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0, bulletMult: 1.0 } } };
-    bullets = []; enemyBullets = []; enemies = []; updateUI(); startWave(); animate();
+    bullets = []; enemyBullets = []; enemies = []; 
+    
+    mpOtherPlayersState = {};
+    if(isMultiplayer) {
+        Object.keys(roomPlayers).forEach(k => { if(k !== userKey) mpOtherPlayersState[k] = { lastShotFrame: 0, nextShotFrame: 0 }; });
+        // 每 100ms 上傳一次本機的滑鼠角度與射擊狀態
+        syncIntervalTimer = setInterval(() => {
+            if(state !== 'PLAYING') return;
+            const aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+            db.collection('rooms').doc(currentRoomId).update({ [`players.${userKey}.angle`]: aimAngle, [`players.${userKey}.weapon`]: currentWeapon, [`players.${userKey}.isShooting`]: (activeSlot === 'main') });
+        }, 100);
+    }
+
+    updateUI(); startWave(); animate();
 }
 
 function startWave() {
@@ -596,13 +803,18 @@ function startWave() {
     if (selectedDifficulty >= 2) {
         let actualNormal = 0;
         for (let i = 0; i < normalCount; i++) {
-            if (Math.random() < 0.01) { 
-                rangedCount++; 
-            } else { 
-                actualNormal++; 
-            }
+            if (Math.random() < 0.01) { rangedCount++; } else { actualNormal++; }
         }
         normalCount = actualNormal;
+    }
+
+    // ★ 多人模式數量增幅公式
+    let pCount = isMultiplayer ? Object.keys(roomPlayers).length : 1;
+    if (isMultiplayer) {
+        normalCount = Math.floor(normalCount * pCount / 1.15);
+        if(miniCount > 0) miniCount = Math.max(1, Math.floor(miniCount * pCount / 1.15));
+        if(bigCount > 0) bigCount = Math.max(1, Math.floor(bigCount * pCount / 1.15));
+        if(rangedCount > 0) rangedCount = Math.max(1, Math.floor(rangedCount * pCount / 1.15));
     }
 
     for(let i=0; i<normalCount; i++) enemiesToSpawn.push('normal'); for(let i=0; i<miniCount; i++) enemiesToSpawn.push('mini'); for(let i=0; i<bigCount; i++) enemiesToSpawn.push('big'); for(let i=0; i<rangedCount; i++) enemiesToSpawn.push('ranged');
@@ -624,18 +836,22 @@ function handleWaveClear() {
             document.getElementById('shopTabOffhandBtn').classList.remove('hidden'); 
         }
         saveGameData(); state = 'VICTORY'; showMenu('victory'); 
-    } else { currentWave++; saveGameData(); startWave(); }
+    } else { 
+        currentWave++; 
+        if (isMultiplayer && isHost) db.collection('rooms').doc(currentRoomId).update({ wave: currentWave }); // 房主通知更新波數
+        saveGameData(); startWave(); 
+    }
 }
 
-document.getElementById('startBtn').addEventListener('click', () => { initGame(); });
+document.getElementById('startBtn').addEventListener('click', () => { isMultiplayer = false; initGame(); });
 document.getElementById('toShopBtn').addEventListener('click', () => openShop('MENU'));
 document.getElementById('toShopFromGameBtn').addEventListener('click', () => openShop('PAUSED'));
 document.getElementById('pauseBtn').addEventListener('click', () => { state = 'PAUSED'; saveGameData(); showMenu('pause'); });
 document.getElementById('resumeBtn').addEventListener('click', () => { state = 'PLAYING'; showMenu('playing'); animate(); });
-document.getElementById('backToHomeFromPause').addEventListener('click', () => { state = 'MENU'; saveGameData(); showMenu('main'); });
+document.getElementById('backToHomeFromPause').addEventListener('click', () => { if(isMultiplayer) leaveRoom(false); state = 'MENU'; saveGameData(); showMenu('main'); });
 document.getElementById('restartBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
 document.getElementById('clearSaveBtn').addEventListener('click', clearGameData);
-document.getElementById('backToHomeVictoryBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
+document.getElementById('backToHomeVictoryBtn').addEventListener('click', () => { if(isMultiplayer) leaveRoom(false); state = 'MENU'; showMenu('main'); });
 document.getElementById('enterEndlessBtn').addEventListener('click', () => { isEndless = true; currentWave++; saveGameData(); startWave(); animate(); });
 
 document.getElementById('exportSaveBtn').addEventListener('click', () => { const data = { gold, unlockedWeapons, currentWeapon, unlockedOffhands, currentOffhand, defeatedMonsters, globalStats, weaponUpgrades, upgradeCosts, maxDifficultyUnlocked }; prompt(`請複製以下這串【${currentUser}】的備份代碼：`, btoa(encodeURIComponent(JSON.stringify(data)))); });
@@ -690,7 +906,8 @@ function renderBestiary() {
     const container = document.getElementById('bestiaryContainer');
     let html = `<div style="font-size: 14px; color: #ccc; margin-bottom: 20px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
         <strong>最新公式詳解：</strong><br>
-        • 最終血量 = 基礎血量倍率 × (1 + 波數×0.4) × (1 + (難度-1)×0.3)<br>
+        • 最終血量 = 基礎血量倍率 × (1 + 波數×0.4) × (1 + (難度-1)×0.3) <span style="color:#00d2ff;">(多人模式血量再 × 人數)</span><br>
+        • 怪物數量 = 單機數量 <span style="color:#00d2ff;">(多人模式數量再 × 人數/1.15)</span><br>
         • 一般怪金幣 = 基礎值 × (最終血量 - 基礎倍率) × 難度 × 0.75<br>
         • 一般怪經驗 = 基礎值 × (最終血量 - 基礎倍率) × 難度 × 1.5<br>
         • Boss怪金幣 = 基礎值 × (最終血量 / 基礎倍率) × 難度 × 0.38<br>
@@ -744,69 +961,74 @@ function triggerLevelUp() {
     });
 }
 
-function autoAimShoot() {
-    if (activeSlot !== 'main') return; 
+function autoAimShoot(shooterKey, isMe, angle, currentWeap, isShooting) {
+    if (!isShooting) return; 
 
-    const weapon = WEAPONS[currentWeapon]; 
-    let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0; 
-    let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0; 
-    let weaponSpeedMult = sessionStats.weaponMods[currentWeapon]?.speedMult || 1.0;
-
-    const wUpg = weaponUpgrades[currentWeapon];
-    const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); 
-    const wFrBonus = Math.pow(0.95, wUpg.frLvl - 1);  
-
-    const finalDamage = weapon.damage * globalStats.damageMult * wDmgBonus * sessionStats.damageMult * weaponDmgMult; 
-    const finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * wFrBonus * sessionStats.fireRateMult * weaponFrMult)); 
+    const weapon = WEAPONS[currentWeap]; 
+    let weaponDmgMult = 1.0; 
+    let weaponFrMult = 1.0; 
+    let weaponSpeedMult = 1.0;
     
-    // 計算發射子彈數量（包含額外發射量以及散彈槍的 1.5 倍加成）
-    let baseBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal;
-    let bulletMult = sessionStats.weaponMods[currentWeapon]?.bulletMult || 1.0;
-    const finalBullets = Math.round(baseBullets * bulletMult);
-    
-    let currentSpread = weapon.spread;
-    if (currentSpread === 0 && finalBullets > 1) currentSpread = 0.15; 
-    const finalSpread = Math.max(0, currentSpread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0)); 
-    
-    const finalSpeed = 10 * sessionStats.bulletSpeedMult * weaponSpeedMult;
+    // 其他玩家模擬的基礎數值
+    let finalDamage = weapon.damage * globalStats.damageMult; 
+    let finalFireRate = weapon.fireRate;
+    let finalBullets = weapon.bullets;
+    let finalSpread = weapon.spread;
+    let finalSpeed = 10;
 
-    const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+    // 自己套用完整的加成
+    if (isMe) {
+        weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0; 
+        weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0; 
+        weaponSpeedMult = sessionStats.weaponMods[currentWeapon]?.speedMult || 1.0;
+
+        const wUpg = weaponUpgrades[currentWeapon];
+        const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); 
+        const wFrBonus = Math.pow(0.95, wUpg.frLvl - 1);  
+
+        finalDamage = weapon.damage * globalStats.damageMult * wDmgBonus * sessionStats.damageMult * weaponDmgMult; 
+        finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * wFrBonus * sessionStats.fireRateMult * weaponFrMult)); 
+        
+        let baseBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal;
+        let bulletMult = sessionStats.weaponMods[currentWeapon]?.bulletMult || 1.0;
+        finalBullets = Math.round(baseBullets * bulletMult);
+        
+        let currentSpread = weapon.spread;
+        if (currentSpread === 0 && finalBullets > 1) currentSpread = 0.15; 
+        finalSpread = Math.max(0, currentSpread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0)); 
+        finalSpeed = 10 * sessionStats.bulletSpeedMult * weaponSpeedMult;
+    }
+
+    let stateRef = isMe ? { lastShotFrame: myLastShotFrame, nextShotFrame: myNextShotFrame } : mpOtherPlayersState[shooterKey];
+    if(!stateRef) return;
+
     const fireMode = weapon.fireMode || 'stream';
 
     if (fireMode === 'stream') {
         const averageInterval = Math.max(1, Math.floor(finalFireRate / finalBullets));
         
-        if (frames >= nextShotFrame) {
-            const randomScatterAngle = baseAngle + (Math.random() - 0.5) * finalSpread;
-            
+        if (frames >= stateRef.nextShotFrame) {
+            const randomScatterAngle = angle + (Math.random() - 0.5) * finalSpread;
             bullets.push({ 
-                x: player.x, 
-                y: player.y, 
-                radius: 6, 
-                color: weapon.color, 
-                damage: finalDamage, 
-                velocity: { 
-                    x: Math.cos(randomScatterAngle) * finalSpeed, 
-                    y: Math.sin(randomScatterAngle) * finalSpeed 
-                } 
+                x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, 
+                velocity: { x: Math.cos(randomScatterAngle) * finalSpeed, y: Math.sin(randomScatterAngle) * finalSpeed } 
             }); 
-            nextShotFrame = frames + averageInterval;
+            stateRef.nextShotFrame = frames + averageInterval;
         }
     } else {
-        if (frames - lastShotFrame >= finalFireRate) {
+        if (frames - stateRef.lastShotFrame >= finalFireRate) {
             for (let i = 0; i < finalBullets; i++) { 
-                let fireAngle = baseAngle; 
+                let fireAngle = angle; 
                 if (finalSpread > 0) fireAngle += (Math.random() - 0.5) * finalSpread; 
-                
                 bullets.push({ 
-                    x: player.x, y: player.y, radius: 6, color: weapon.color, 
-                    damage: finalDamage, 
+                    x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, 
                     velocity: { x: Math.cos(fireAngle) * finalSpeed, y: Math.sin(fireAngle) * finalSpeed } 
                 }); 
             }
-            lastShotFrame = frames;
+            stateRef.lastShotFrame = frames;
         }
     }
+    if(isMe) { myLastShotFrame = stateRef.lastShotFrame; myNextShotFrame = stateRef.nextShotFrame; }
 }
 
 function spawnSpecificEnemy(type) {
@@ -819,6 +1041,12 @@ function spawnSpecificEnemy(type) {
     let diffScaling = (1 + (selectedDifficulty - 1) * 0.3);
     let baseHp = data.baseHpMulti * (1 + currentWave * 0.4) * diffScaling; 
     
+    // ★ 多人模式血量增幅公式
+    let pCount = isMultiplayer ? Object.keys(roomPlayers).length : 1;
+    if (isMultiplayer) {
+        baseHp *= pCount;
+    }
+
     let frostRes = 0;
     if (type === 'big') { 
         let bossIndex = Math.floor(currentWave / 10); if (bossIndex < 1) bossIndex = 1;
@@ -844,19 +1072,31 @@ function animate() {
     if (state !== 'PLAYING') return; requestAnimationFrame(animate);
     ctx.fillStyle = 'rgba(26, 26, 26, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
     
-    autoAimShoot();
+    const myAimAngle = Math.atan2(mouseY - player.y, mouseX - player.x); 
+    autoAimShoot(userKey, true, myAimAngle, currentWeapon, activeSlot === 'main');
 
-    const aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x); 
+    // 繪製其他玩家的槍管與模擬射擊
+    if (isMultiplayer) {
+        Object.keys(roomPlayers).forEach(k => {
+            if (k === userKey) return; 
+            let pData = roomPlayers[k];
+            if(!pData) return;
+            autoAimShoot(k, false, pData.angle, pData.weapon, pData.isShooting);
+            
+            ctx.beginPath(); ctx.moveTo(player.x, player.y); 
+            ctx.lineTo(player.x + Math.cos(pData.angle) * 40, player.y + Math.sin(pData.angle) * 40); 
+            ctx.strokeStyle = "rgba(255, 100, 100, 0.5)"; ctx.lineWidth = 2; ctx.stroke(); 
+        });
+    }
+
+    // 繪製自己的槍管與共用底座
     if (activeSlot === 'main') {
-        ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(player.x + Math.cos(aimAngle) * 40, player.y + Math.sin(aimAngle) * 40); ctx.strokeStyle = "rgba(255, 255, 255, 0.2)"; ctx.lineWidth = 2; ctx.stroke(); 
+        ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(player.x + Math.cos(myAimAngle) * 40, player.y + Math.sin(myAimAngle) * 40); ctx.strokeStyle = "rgba(0, 210, 255, 0.8)"; ctx.lineWidth = 3; ctx.stroke(); 
+    }
+    if (activeSlot === 'offhand' && currentOffhand === 'shield') {
+        ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 15, myAimAngle - Math.PI/2.5, myAimAngle + Math.PI/2.5); ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0, 210, 255, 0.8)'; ctx.lineCap = 'round'; ctx.stroke();
     }
     ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2); ctx.fillStyle = player.color; ctx.fill();
-
-    if (activeSlot === 'offhand' && currentOffhand === 'shield') {
-        ctx.beginPath();
-        ctx.arc(player.x, player.y, player.radius + 15, aimAngle - Math.PI/2.5, aimAngle + Math.PI/2.5);
-        ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0, 210, 255, 0.8)'; ctx.lineCap = 'round'; ctx.stroke();
-    }
 
     for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
         let bullet = bullets[bIndex]; let nearestEnemy = null; let minDist = 150; 
@@ -899,7 +1139,10 @@ function animate() {
             if (activeSlot === 'offhand' && currentOffhand === 'shield') dmgToPlayer *= 0.5;
 
             enemies.splice(eIndex, 1); hp -= dmgToPlayer; updateUI();
-            if (hp <= 0) { state = 'GAMEOVER'; document.getElementById('failWaveDisplay').innerText = currentWave; document.getElementById('sessionGold').innerText = sessionGold; saveGameData(); showMenu('over'); } continue; 
+            if (hp <= 0) { 
+                state = 'GAMEOVER'; document.getElementById('failWaveDisplay').innerText = currentWave; document.getElementById('sessionGold').innerText = sessionGold; 
+                if(isMultiplayer) leaveRoom(false); saveGameData(); showMenu('over'); 
+            } continue; 
         }
 
         for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
@@ -921,8 +1164,7 @@ function animate() {
     }
 
     for (let i = enemyBullets.length - 1; i >= 0; i--) {
-        let eb = enemyBullets[i];
-        eb.x += eb.velocity.x; eb.y += eb.velocity.y;
+        let eb = enemyBullets[i]; eb.x += eb.velocity.x; eb.y += eb.velocity.y;
         
         ctx.beginPath(); ctx.arc(eb.x, eb.y, eb.radius, 0, Math.PI * 2);
         ctx.fillStyle = eb.color; ctx.shadowBlur = 10; ctx.shadowColor = eb.color; ctx.fill(); ctx.shadowBlur = 0; 
@@ -935,7 +1177,10 @@ function animate() {
             let dmg = eb.damage;
             if (activeSlot === 'offhand' && currentOffhand === 'shield') { dmg = 0; }
             hp -= dmg; updateUI();
-            if (hp <= 0) { state = 'GAMEOVER'; document.getElementById('failWaveDisplay').innerText = currentWave; document.getElementById('sessionGold').innerText = sessionGold; saveGameData(); showMenu('over'); }
+            if (hp <= 0) { 
+                state = 'GAMEOVER'; document.getElementById('failWaveDisplay').innerText = currentWave; document.getElementById('sessionGold').innerText = sessionGold; 
+                if(isMultiplayer) leaveRoom(false); saveGameData(); showMenu('over'); 
+            }
         }
     }
 
