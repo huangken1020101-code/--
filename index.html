@@ -26,8 +26,9 @@
 
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
         
-        #shopMenu, #probMenu, #multiplayerMenu, #lobbyMenu, #settingsMenu { justify-content: flex-start; padding: 40px 0; overflow-y: auto; background: rgba(20, 20, 30, 0.95); }
-        .container-box { display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; width: 100%; }
+        #shopMenu, #probMenu, #multiplayerMenu, #lobbyMenu, #settingsMenu, #gachaMenu { justify-content: flex-start; padding: 40px 0; overflow-y: auto; background: rgba(20, 20, 30, 0.95); }
+        /* 確保所有容器都有正確的 Flex 置中排版 */
+        #shopContainer, #probContainerBox, .container-box { display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; width: 100%; }
 
         .overlay h1 { font-size: 48px; margin-bottom: 10px; color: #00d2ff; }
         .overlay p { font-size: 20px; margin-bottom: 20px; text-align: center;}
@@ -94,6 +95,10 @@
         .player-list-box { background: rgba(0,0,0,0.5); border: 1px solid #555; border-radius: 8px; width: 500px; padding: 15px; min-height: 200px; margin-bottom: 20px;}
         .player-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px dashed #444; font-size: 18px; }
         .host-crown { color: #ffeb3b; font-weight: bold; margin-right: 5px; }
+        
+        .fragment-item { background: rgba(255,255,255,0.1); border: 1px solid #00d2ff; padding: 10px; border-radius: 8px; text-align: center; width: 140px; }
+        .fragment-item span { display: block; font-size: 18px; font-weight: bold; color: #ffc107; }
+        .fragment-item small { color: #ccc; }
     </style>
 </head>
 <body>
@@ -105,6 +110,9 @@
         <div>攻擊力: <span id="dmgDisplay">1.0</span></div>
         <div style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px; font-size: 16px;">
             武裝狀態(左鍵切換): <span id="activeSlotDisplay" style="color: #00d2ff; font-weight: bold;">主武器</span>
+        </div>
+        <div id="shieldSkillDisplay" style="display:none; margin-top: 5px; font-size: 16px;">
+            塔盾技能(E): <span id="shieldCooldownText" style="color:#4caf50; font-weight:bold;">準備就緒</span>
         </div>
         <button id="pauseBtn">暫停遊戲 (可開軍火庫)</button>
     </div>
@@ -163,6 +171,7 @@
             <button id="startBtn" class="menu-btn">單機模式出擊</button>
             <button id="multiplayerBtn" class="menu-btn" style="background: #9c27b0; color: white;">🌍 多人連線大廳</button>
             <button id="toShopBtn" class="menu-btn shop-btn">軍火庫 (永久升級)</button>
+            <button id="toGachaBtn" class="menu-btn" style="background: #ff9800; color: white;">🎁 抽獎中心 (星級突破)</button>
             <div class="row-group" style="margin-bottom: 0;">
                 <button id="exportSaveBtn" class="menu-btn secondary-btn" style="min-width: 140px; font-size: 16px; padding: 8px;">📤 匯出備份</button>
                 <button id="importSaveBtn" class="menu-btn secondary-btn" style="min-width: 140px; font-size: 16px; padding: 8px;">📥 匯入覆蓋</button>
@@ -175,6 +184,29 @@
                 <button id="repairSaveBtn" class="menu-btn" style="background: #ff9800; color: white; min-width: 130px; font-size: 16px; padding: 8px;">🔧 修復存檔</button>
                 <button id="clearSaveBtn" class="menu-btn danger-btn" style="min-width: 130px; font-size: 16px; padding: 8px;">刪除雲端紀錄</button>
             </div>
+        </div>
+    </div>
+
+    <div id="gachaMenu" class="overlay hidden">
+        <div class="container-box">
+            <h1 style="color: #ff9800;">🎁 神秘抽獎中心</h1>
+            <p style="font-size: 18px; color: #ddd; max-width: 600px; line-height: 1.5;">
+                在難度二以上擊殺怪物可累積【抽獎點】。<br>
+                消耗點數抽取武器碎片，用於「軍火庫」中提升武器星級！<br>
+                <span style="font-size: 14px; color: #aaa;">(越貴的武器碎片越難抽到，且僅能抽到已解鎖的武器碎片)</span>
+            </p>
+            <div style="font-size: 26px; color: #00d2ff; font-weight: bold; margin-bottom: 20px;">
+                目前抽獎點數: <span id="gachaPointsDisplay">0</span>
+            </div>
+            <div class="row-group">
+                <button id="drawGachaBtn" class="menu-btn shop-btn" style="padding: 15px 40px; font-size: 22px;">消耗 <span id="gachaCostDisplay">10</span> 點抽獎</button>
+            </div>
+            
+            <div class="section-title">我的碎片庫存</div>
+            <div id="fragmentsList" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; width: 600px; min-height: 100px;">
+                </div>
+            <br><br>
+            <button id="closeGachaBtn" class="menu-btn secondary-btn">返回主頁</button>
         </div>
     </div>
 
@@ -307,6 +339,14 @@
                     <div class="shop-item"><div class="shop-item-info"><span>專屬武器威力 (+10% 傷害)</span><span id="w_dmgLvl">目前等級: 1 / 10</span></div><button id="upg_w_dmgBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 140px;"></button></div>
                     <div class="shop-item"><div class="shop-item-info"><span>專屬武器射速 (-5% 間隔)</span><span id="w_frLvl">目前等級: 1 / 10</span></div><button id="upg_w_frBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 140px;"></button></div>
                     <div class="shop-item"><div class="shop-item-info"><span>裝甲血量擴增 (+5 最大血量)</span><span id="w_hpLvl">目前等級: 1 / 10</span></div><button id="upg_w_hpBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 140px;"></button></div>
+                    <div class="shop-item" style="border: 2px solid #ff9800; background: rgba(255, 152, 0, 0.1);">
+                        <div class="shop-item-info">
+                            <span style="color: #ff9800; font-weight: bold;">武器升星 (解鎖上限與強化屬性)</span>
+                            <span id="w_starDisplay" style="color: #ddd;">目前星級: 0 | 碎片: 0 / 1</span>
+                            <span style="font-size:12px; color:#aaa;">(需先將上述三項強化升至滿級)</span>
+                        </div>
+                        <button id="upg_w_starBtn" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 140px; background: #ff9800;">升星</button>
+                    </div>
                 </div>
 
                 <div class="section-title">通用能力強化 (永久套用)</div>
@@ -327,6 +367,15 @@
                             <span style="color:#ddd; margin-top: 5px;">切換後：<br>➤ 完全抵禦遠程攻擊 (100% 減免)<br>➤ 大幅削弱近戰衝擊 (50% 減免)</span>
                         </div>
                         <button id="btn_shield" class="menu-btn" style="padding: 10px 15px; font-size: 18px; min-width: 120px;" onclick="buyOrEquipOffhand('shield')">10000 金幣</button>
+                    </div>
+
+                    <div class="shop-item" id="shieldUpgContainer" style="display:none; width: 500px; border: 1px solid #00d2ff;">
+                        <div class="shop-item-info" style="max-width: 320px;">
+                            <span style="color:#00d2ff; font-weight:bold;">塔盾強化 (滿級 10)</span>
+                            <span id="shieldLvlDisplay" style="color:#ddd;">目前等級: 1</span>
+                            <span style="font-size:13px; color:#aaa; margin-top:3px;">Lv2解鎖: 全屏格擋(E鍵) 清空子彈並暈眩小怪1秒<br>冷卻隨等級縮短 (目前: <span id="shieldCooldownDesc">無</span>)</span>
+                        </div>
+                        <button id="upgShieldBtn" class="menu-btn" style="padding: 10px 15px; font-size: 16px; min-width: 120px;"></button>
                     </div>
                     
                     <div class="shop-item" id="shield2_container" style="display: none; width: 500px;">
@@ -366,67 +415,99 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const ui = document.getElementById('ui');
 const topCenterUI = document.getElementById('topCenterUI');
-
 const menus = { 
     login: document.getElementById('loginMenu'), main: document.getElementById('mainMenu'), 
     pause: document.getElementById('pauseMenu'), shop: document.getElementById('shopMenu'), 
     over: document.getElementById('gameOverMenu'), levelup: document.getElementById('levelUpMenu'), 
     victory: document.getElementById('victoryMenu'), prob: document.getElementById('probMenu'), 
     mpMenu: document.getElementById('multiplayerMenu'), lobby: document.getElementById('lobbyMenu'),
-    settings: document.getElementById('settingsMenu')
+    settings: document.getElementById('settingsMenu'), gacha: document.getElementById('gachaMenu')
 };
-
 const RARITIES = { '普通': { color: '#ffffff', weight: 100 }, '常見': { color: '#4caf50', weight: 70 }, '稀有': { color: '#00d2ff', weight: 35 }, '史詩': { color: '#b145e9', weight: 15 }, '傳奇': { color: '#ff9800', weight: 5 }, '神話': { color: '#ff4444', weight: 2 }, '神聖': { color: '#ffeb3b', weight: 0.5 }, '獨家': { color: '#ff00ff', weight: 50 } };
-
 canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
 let state = 'LOGIN'; let previousState = 'LOGIN'; 
-let mouseX = canvas.width / 2; let mouseY = canvas.height / 2; 
+let mouseX = canvas.width / 2;
+let mouseY = canvas.height / 2; 
 
-// 鍵盤狀態與雙持盾牌
+// 鍵盤與盾牌
 let keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 let tempShieldAngle = 0; let shopShieldAngle = 0;
 let playerHasTempShield = false; 
-let shield2SyncActive = false; let shield2SyncTimer = 0; let lastShield2SyncFrame = -9999;
+let shield2SyncActive = false; let shield2SyncTimer = 0;
+let lastShield2SyncFrame = -9999;
 let hasDefeatedFinalBoss = false;
 let sessionBossKills = { mini: 0, big: 0, final_boss: 0 };
 let settingShowBossUI = true;
 
+// ====== 抽獎與升星系統變數 ======
+let gachaPoints = 0;
+let totalDraws = 0;
+let killCounters = {}; // e.g., { '2': { normal: 0, boss: 0, endlessBoss: 0 } }
+let weaponFragments = {}; // e.g., { pistol: 0 }
+let weaponStars = {}; // e.g., { pistol: 0 }
+let shieldLvl = 1;
+let shieldSkillCooldownTimer = 0;
+
 // ====== 遺物系統變數 ======
-let bossKillsForRelic = 0; 
+let bossKillsForRelic = 0;
 let activeRelics = { demonPact: false, glassCannon: false, greedSkull: false, absoluteZero: false, thorns: false, giantSlayer: false, radiantAura: false, timeWarp: false, infiniteBandolier: false, soulReaper: false };
 let soulReaperKills = 0;
 
 const RELIC_DATA = [
-    { id: 'demonPact', name: "惡魔契約", cost: 24, desc: "最終傷害 +60%，擊殺敵人有10%機率回復 0.1 血量。" },
-    { id: 'glassCannon', name: "玻璃大砲", cost: 20, desc: "每次射擊發射 +2 顆子彈，射擊間隔縮短 30%。" },
-    { id: 'greedSkull', name: "貪婪之骸", cost: 8, desc: "擊殺獲得的金幣 2.5 倍，經驗值 1.5 倍。" },
-    { id: 'absoluteZero', name: "絕對零度", cost: 16, desc: "全場怪物移速降 30%，冰霜緩速上限突破至 100%。" },
-    { id: 'thorns', name: "反甲之心", cost: 24, desc: "受傷時引發全螢幕衝擊波 (武器每秒最終傷害 / 5 * 受到傷害)。" },
-    { id: 'giantSlayer', name: "巨人殺手", cost: 16, desc: "對所有 Boss 造成的傷害額外增加 200%。" },
-    { id: 'radiantAura', name: "輻射光環", cost: 24, desc: "無須開火，每秒自動對半徑 300 內敵人，造成 (武器每秒最終傷害 / 10) 持續傷害。" },
-    { id: 'timeWarp', name: "時空扭曲", cost: 16, desc: "敵人的所有遠程子彈飛行速度降低 50%。" },
-    { id: 'infiniteBandolier', name: "無限彈鏈", cost: 8, desc: "子彈飛行速度提升 +100%，武器基礎傷害 +30%。" },
-    { id: 'soulReaper', name: "靈魂收割鐮", cost: 32, desc: "每擊殺 50 隻怪，永久提升 1% 最終傷害並回復 0.5 最大血量。" }
+    { id: 'demonPact', name: "惡魔契約", cost: () => 24, desc: () => "最終傷害 +60%，擊殺敵人有10%機率回復 0.1 血量。" },
+    { id: 'glassCannon', name: "玻璃大砲", cost: () => 20, desc: () => "每次射擊發射 +2 顆子彈，射擊間隔縮短 30%。" },
+    { id: 'greedSkull', name: "貪婪之骸", cost: () => 8, desc: () => "擊殺獲得的金幣 2.5 倍，經驗值 1.5 倍。" },
+    { id: 'absoluteZero', name: "絕對零度", cost: () => 16, desc: () => "全場怪物移速降 30%，冰霜緩速上限突破至 100%。" },
+    { id: 'thorns', name: "反甲之心", cost: (d) => Math.ceil(24/(d*0.5)), desc: (d) => `受傷時引發衝擊波，造成(武器每秒最終傷害 * 受到傷害 / 8 / ${d})的全螢幕傷害。\n(Boss只受1%傷害。最多殺死10個敵人，超過數量的目標血量變為1並凍結3秒)` },
+    { id: 'giantSlayer', name: "巨人殺手", cost: () => 16, desc: () => "對所有 Boss 造成的傷害額外增加 200%。" },
+    { id: 'radiantAura', name: "輻射光環", cost: (d) => Math.ceil(24/(d*0.5)), desc: (d) => `無須開火，每 ${1*d} 秒自動對半徑 ${Math.floor(300/d)} 內敵人，造成(武器每秒最終傷害 / 20 / ${d})的範圍持續傷害。` },
+    { id: 'timeWarp', name: "時空扭曲", cost: () => 16, desc: () => "敵人的所有遠程子彈飛行速度降低 50%。" },
+    { id: 'infiniteBandolier', name: "無限彈鏈", cost: () => 8, desc: () => "子彈飛行速度提升 +100%，武器基礎傷害 +30%。" },
+    { id: 'soulReaper', name: "靈魂收割鐮", cost: () => 32, desc: () => "每擊殺 50 隻怪，永久提升 1% 最終傷害並回復 0.5 最大血量。" }
 ];
 
-window.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
+let animId;
+
+window.addEventListener('keydown', e => { 
+    if(keys.hasOwnProperty(e.key)) keys[e.key] = true; 
+    if ((e.key === 'e' || e.key === 'E') && state === 'PLAYING') {
+        if (currentOffhand === 'shield' && shieldLvl >= 2 && shieldSkillCooldownTimer <= 0 && activeSlot === 'offhand') {
+            triggerShieldSkill();
+        }
+    }
+});
 window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
 window.addEventListener('contextmenu', e => { if (state === 'PLAYING') e.preventDefault(); });
+
+function triggerShieldSkill() {
+    ctx.fillStyle = 'rgba(0, 255, 255, 0.4)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height); 
+    
+    enemyBullets = [];
+    enemies.forEach(en => {
+        if (!MONSTER_DATA[en.type]?.isBoss) {
+            en.frozenTimer = 60; // stun 1s
+        }
+    });
+    
+    let cooldownSec = 60 - (shieldLvl * 2 - 4);
+    shieldSkillCooldownTimer = cooldownSec * 60;
+}
 
 let currentUser = localStorage.getItem('towerDefenseUser_email');
 let userKey = currentUser ? currentUser.replace(/\./g, '_') : '';
 let gold = 0; 
 let unlockedWeapons = ['pistol']; let currentWeapon = 'pistol';     
-let unlockedOffhands = []; let currentOffhand = 'none'; 
+let unlockedOffhands = [];
+let currentOffhand = 'none'; 
 let defeatedMonsters = []; 
 
 let globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1, hpMult: 1.0, hpLvl: 1 };
 let weaponUpgrades = { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } };
 let upgradeCosts = { fireRate: 50, damage: 100, hp: 200 }; let maxDifficultyUnlocked = 1;
 let selectedDifficulty = 1;
-
-let isMultiplayer = false; let isHost = false; let currentRoomId = null; let roomData = null; let roomPlayers = {}; 
+let isMultiplayer = false; let isHost = false; let currentRoomId = null; let roomData = null; let roomPlayers = {};
 let unsubscribeRoom = null; let syncIntervalTimer = null; let autoRefreshTimer = null; let refreshCountdown = 10; let mpOtherPlayersState = {};
 
 const WEAPONS = {
@@ -441,15 +522,18 @@ const MONSTER_DATA = {
     'mini': { name: '巨型突變體', baseDamage: 2, baseHpMulti: 15, baseGold: 15, baseExp: 15, speed: 1.0, color: '#9c27b0', radius: 40, isBoss: true, spawnRule: '難度 1 以上 / 每 5 波出現一次', desc: '傷害公式：基礎傷害 * (擊殺數或1) * 難度<br>技能公式：半血時召喚 (難度 - 1) * 難度 / 2 隻小怪。<br>寒冰抗性：1% * 難度 * 單局被擊殺次數 / 2 (最高60%)' },
     'big': { name: '首領巨獸', baseDamage: 4, baseHpMulti: 50, baseGold: 80, baseExp: 80, speed: 0.4, color: '#e91e63', radius: 65, isBoss: true, spawnRule: '難度 1 以上 / 每 10 波出現一次', desc: '傷害公式：基礎傷害 * (擊殺數或1) * 難度<br>技能公式：半血時回復 1% * (難度 - 1) * 難度 / 2 的血量(可超過原本血量)，並每5秒發射一道雷射，傷害為 最終傷害 * (難度 - 1) * 難度 / 2。<br>寒冰抗性：1% * 難度 * 單局被擊殺次數 * 3' },
     'ranged': { name: '遠程射手', baseDamage: 1, baseHpMulti: 2, baseGold: 5, baseExp: 5, speed: 0.25, color: '#4caf50', radius: 25, spawnRule: '難度 2 以上 / 依波數機率突變(最高50%)', desc: '出現機率公式：1% * 難度 * 波數 / ((波數 + 5) / 波數)<br>傷害公式：基礎傷害 * 難度<br>難度二以上出現，每 3 秒發射酸液彈。<br>無特殊抗性' },
-    'final_boss': { name: '終焉領主', baseDamage: 7, baseHpMulti: 300, baseGold: 300, baseExp: 300, speed: 0.2, color: '#000000', radius: 80, isBoss: true, spawnRule: '難度 2 以上 / 第 30 波 (無盡模式 10% 替換首領)', desc: '傷害公式：基礎傷害 * (擊殺數或1) * 難度<br>技能公式：半血給予玩家透過wasd或上下左右操控的試煉護盾，並每秒召喚 (難度 - 1) * 難度 / 2 顆子彈。<br>寒冰抗性：99% * 被擊殺次數 * 難度 (無上限)' }
+    'final_boss': { name: '終焉領主', baseDamage: 7, baseHpMulti: 300, baseGold: 300, baseExp: 300, speed: 0.2, color: '#000000', radius: 80, isBoss: true, spawnRule: '難度 2 以上 / 第 30 波 (無盡模式 10% 替換首領)', desc: '傷害公式：基礎傷害 * (擊殺數或1) * 難度<br>技能公式：半血給予玩家試煉護盾，並每秒召喚 (難度 - 1) * 難度 / 2 顆子彈。<br>寒冰抗性：99% * 被擊殺次數 * 難度 (無上限)' }
 };
 
 let currentWave = 1; let isEndless = false; let maxHp = 10; let hp = maxHp;
-let frames = 0; let myLastShotFrame = 0; let myNextShotFrame = 0; 
-let sessionGold = 0; let bullets = []; let enemyBullets = []; let enemies = [];
+let frames = 0;
+let myLastShotFrame = 0; let myNextShotFrame = 0; 
+let sessionGold = 0; let bullets = []; let enemyBullets = [];
+let enemies = [];
 const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25, color: '#00d2ff' };
 let enemiesToSpawn = []; let waveSpawnInterval = 60; 
-let sessionExp = 0; let sessionLevel = 1; let sessionMaxExp = 10; let sessionStats = {}; 
+let sessionExp = 0; let sessionLevel = 1; let sessionMaxExp = 10;
+let sessionStats = {}; 
 let activeSlot = 'main'; 
 
 const UPGRADE_POOL = [
@@ -499,14 +583,12 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
         checkLogin(); await loadGameData(); 
     } else { document.getElementById('loginError').style.display = 'block'; }
 });
-
 document.getElementById('logoutBtn').addEventListener('click', (e) => { e.preventDefault(); localStorage.removeItem('towerDefenseUser_email'); location.reload(); });
 
 async function loadGameData() {
     if (!currentUser) return;
     document.getElementById('currentUserDisplay').innerText = `☁️ 連線中: ${currentUser}...`; 
     document.getElementById('startBtn').disabled = true; document.getElementById('multiplayerBtn').disabled = true;
-
     try {
         const docSnap = await db.collection("saves").doc(currentUser).get();
         if (docSnap.exists) {
@@ -518,21 +600,31 @@ async function loadGameData() {
             globalStats = data.globalStats ?? { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1, hpMult: 1.0, hpLvl: 1 };
             weaponUpgrades = data.weaponUpgrades ?? { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } };
             maxDifficultyUnlocked = data.maxDifficultyUnlocked ?? 1;
+            
+            // 抽獎與升星新資料
+            gachaPoints = data.gachaPoints ?? 0;
+            totalDraws = data.totalDraws ?? 0;
+            killCounters = data.killCounters ?? {};
+            weaponFragments = data.weaponFragments ?? {};
+            weaponStars = data.weaponStars ?? {};
+            shieldLvl = data.shieldLvl ?? 1;
         } else {
-            gold = 0; unlockedWeapons = ['pistol']; currentWeapon = 'pistol'; unlockedOffhands = []; currentOffhand = 'none'; defeatedMonsters = []; hasDefeatedFinalBoss = false;
-            settingShowBossUI = true;
+            gold = 0; unlockedWeapons = ['pistol']; currentWeapon = 'pistol'; unlockedOffhands = []; currentOffhand = 'none'; defeatedMonsters = []; hasDefeatedFinalBoss = false; settingShowBossUI = true;
             globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1, hpMult: 1.0, hpLvl: 1 };
             weaponUpgrades = { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } };
             maxDifficultyUnlocked = 1;
+            
+            gachaPoints = 0; totalDraws = 0; killCounters = {}; weaponFragments = {}; weaponStars = {}; shieldLvl = 1;
         }
         if (!WEAPONS[currentWeapon]) currentWeapon = 'pistol';
         Object.keys(WEAPONS).forEach(k => { if (!weaponUpgrades[k]) weaponUpgrades[k] = { dmgLvl: 1, frLvl: 1, hpLvl: 1 }; });
     } catch (e) { console.error("雲端讀取失敗:", e); alert("雲端連線失敗，請檢查網路連線！"); }
     finally {
-        upgradeCosts.fireRate = Math.floor(50 * Math.pow(1.5, globalStats.fireRateLvl - 1)); 
+        upgradeCosts.fireRate = Math.floor(50 * Math.pow(1.5, globalStats.fireRateLvl - 1));
         upgradeCosts.damage = Math.floor(100 * Math.pow(1.5, globalStats.damageLvl - 1)); 
         upgradeCosts.hp = Math.floor(200 * Math.pow(1.5, globalStats.hpLvl - 1));
-        document.getElementById('startBtn').disabled = false; document.getElementById('multiplayerBtn').disabled = false;
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('multiplayerBtn').disabled = false;
         document.getElementById('currentUserDisplay').innerText = `👤 目前指揮官: ${currentUser}`;
         if (maxDifficultyUnlocked > 1) document.getElementById('shopTabOffhandBtn').classList.remove('hidden');
         updateMainMenuDiffUI(); updateUI(); updateSettingsUI();
@@ -541,7 +633,7 @@ async function loadGameData() {
 
 function saveGameData() {
     if (state !== 'GAMEOVER' && currentUser) {
-        const data = { gold, unlockedWeapons, currentWeapon, unlockedOffhands, currentOffhand, defeatedMonsters, hasDefeatedFinalBoss, settingShowBossUI, globalStats, weaponUpgrades, upgradeCosts, maxDifficultyUnlocked };
+        const data = { gold, unlockedWeapons, currentWeapon, unlockedOffhands, currentOffhand, defeatedMonsters, hasDefeatedFinalBoss, settingShowBossUI, globalStats, weaponUpgrades, upgradeCosts, maxDifficultyUnlocked, gachaPoints, totalDraws, killCounters, weaponFragments, weaponStars, shieldLvl };
         localStorage.setItem(`towerDefenseSave_${currentUser}`, JSON.stringify(data));
         db.collection("saves").doc(currentUser).set(data).catch((e) => console.error("雲端同步失敗", e));
     }
@@ -549,15 +641,15 @@ function saveGameData() {
 
 function clearGameData() {
     if (confirm(`確定要清除【${currentUser}】的所有遊戲進度嗎？這將刪除雲端資料且無法復原！`)) {
-        localStorage.removeItem(`towerDefenseSave_${currentUser}`); 
+        localStorage.removeItem(`towerDefenseSave_${currentUser}`);
         db.collection("saves").doc(currentUser).delete().then(() => { alert("雲端資料已刪除！"); location.reload(); });
     }
 }
 
+// 修復存檔
 document.getElementById('repairSaveBtn').addEventListener('click', () => {
     if (confirm("遇到遊戲卡死、數值變成 NaN 或是無法遊玩嗎？\n點擊「確定」將嘗試校正您的存檔資料（不會清空進度）。")) repairGameData();
 });
-
 async function repairGameData() {
     if (!currentUser) return alert("請先登入！");
     try {
@@ -582,14 +674,20 @@ async function repairGameData() {
             weaponUpgrades[k].hpLvl = isNaN(Number(weaponUpgrades[k].hpLvl)) || weaponUpgrades[k].hpLvl < 1 ? 1 : Number(weaponUpgrades[k].hpLvl);
         });
         upgradeCosts = { fireRate: Math.floor(50 * Math.pow(1.5, globalStats.fireRateLvl - 1)), damage: Math.floor(100 * Math.pow(1.5, globalStats.damageLvl - 1)), hp: Math.floor(200 * Math.pow(1.5, globalStats.hpLvl - 1)) };
-        await db.collection("saves").doc(currentUser).set({ gold, currentWeapon, unlockedWeapons, defeatedMonsters, hasDefeatedFinalBoss, settingShowBossUI, globalStats, weaponUpgrades, upgradeCosts, maxDifficultyUnlocked });
+        
+        gachaPoints = isNaN(Number(gachaPoints)) ? 0 : Number(gachaPoints);
+        totalDraws = isNaN(Number(totalDraws)) ? 0 : Number(totalDraws);
+        shieldLvl = isNaN(Number(shieldLvl)) || shieldLvl < 1 ? 1 : Number(shieldLvl);
+        if(!killCounters) killCounters = {}; if(!weaponFragments) weaponFragments = {}; if(!weaponStars) weaponStars = {};
+
+        await db.collection("saves").doc(currentUser).set({ gold, currentWeapon, unlockedWeapons, defeatedMonsters, hasDefeatedFinalBoss, settingShowBossUI, globalStats, weaponUpgrades, upgradeCosts, maxDifficultyUnlocked, gachaPoints, totalDraws, killCounters, weaponFragments, weaponStars, shieldLvl });
         alert("🔧 存檔修復完成！遊戲即將重新載入。"); location.reload();
     } catch (e) { alert("修復過程發生錯誤！"); }
 }
 
 window.addEventListener('beforeunload', saveGameData);
 window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
-
+// 滑鼠左鍵切換主/副手，右鍵觸發雙持被動
 window.addEventListener('mousedown', (e) => {
     if (state !== 'PLAYING') return;
     if (e.button === 2 && unlockedOffhands.includes('shield2')) {
@@ -598,7 +696,7 @@ window.addEventListener('mousedown', (e) => {
         if (currentOffhand !== 'none') { activeSlot = (activeSlot === 'main') ? 'offhand' : 'main'; updateUI(); }
     }
 });
-
+// 設定選單邏輯
 function openSettings(fromState) { previousState = fromState; state = 'SETTINGS'; showMenu('settings'); updateSettingsUI(); }
 document.getElementById('settingsBtn').addEventListener('click', () => openSettings('MENU'));
 document.getElementById('settingsBtnPause').addEventListener('click', () => openSettings('PAUSED'));
@@ -608,23 +706,20 @@ document.getElementById('closeSettingsBtn').addEventListener('click', () => {
     else if (state === 'PAUSED') showMenu('pause'); 
     saveGameData(); 
 });
-
 function updateSettingsUI() {
     const btn = document.getElementById('toggleBossUIBtn');
     btn.innerText = settingShowBossUI ? "開啟" : "關閉";
     btn.className = settingShowBossUI ? "menu-btn victory-btn" : "menu-btn danger-btn";
 }
 document.getElementById('toggleBossUIBtn').addEventListener('click', () => { settingShowBossUI = !settingShowBossUI; updateSettingsUI(); saveGameData(); });
-
 function updateMainMenuDiffUI() {
     if (maxDifficultyUnlocked > 1) { document.getElementById('diffSelector').style.display = 'flex'; document.getElementById('diffDisplay').innerText = selectedDifficulty; }
 }
 document.getElementById('diffMinusBtn').addEventListener('click', () => { if(selectedDifficulty > 1) selectedDifficulty--; document.getElementById('diffDisplay').innerText = selectedDifficulty; });
 document.getElementById('diffPlusBtn').addEventListener('click', () => { if(selectedDifficulty < maxDifficultyUnlocked) selectedDifficulty++; document.getElementById('diffDisplay').innerText = selectedDifficulty; });
-
 function showMenu(menuKey) {
     Object.values(menus).forEach(m => m.classList.add('hidden'));
-    ui.style.display = (menuKey === 'playing') ? 'block' : 'none'; 
+    ui.style.display = (menuKey === 'playing') ? 'block' : 'none';
     topCenterUI.style.display = (menuKey === 'playing') ? 'block' : 'none';
     document.getElementById('multiplayerHud').style.display = (menuKey === 'playing' && isMultiplayer) ? 'block' : 'none';
     if (menuKey !== 'playing') document.getElementById('bossUI').style.display = 'none';
@@ -633,27 +728,65 @@ function showMenu(menuKey) {
 
 function calculateMaxHp() {
     let baseMaxHp = Math.max(1, 10 - selectedDifficulty + 1); 
-    let wUpg = weaponUpgrades[currentWeapon] || {hpLvl: 1}; let wHpBonus = (wUpg.hpLvl - 1) * 5; 
+    let wUpg = weaponUpgrades[currentWeapon] || {hpLvl: 1}; 
+    let star = weaponStars[currentWeapon] || 0;
+    let wHpBonus = (wUpg.hpLvl - 1) * 5 + star * 5; 
     return Math.round(baseMaxHp * globalStats.hpMult) + wHpBonus;
 }
 
-function calculateWeaponUpgradeCost(baseCost, towerCost, level) { return Math.floor(Math.floor(baseCost + (towerCost * 0.1)) * Math.pow(1.5, level - 1)); }
+function calculateWeaponUpgradeCost(baseCost, towerCost, level) { 
+    return Math.floor(Math.floor(baseCost + (towerCost * 0.1)) * Math.pow(1.5, level - 1));
+}
+
+function getCurrentDPS() {
+    const weapon = WEAPONS[currentWeapon]; 
+    let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0;
+    let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0; 
+    const wUpg = weaponUpgrades[currentWeapon] || {dmgLvl: 1, frLvl: 1};
+    let star = weaponStars[currentWeapon] || 0;
+    const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); 
+    const wFrBonus = Math.pow(0.95, wUpg.frLvl - 1) * Math.pow(0.95, star); // 星級攻速加成
+    let starDmgBonus = 1 + star * 0.2; // 星級傷害加成
+
+    let finalDamage = weapon.damage * globalStats.damageMult * wDmgBonus * sessionStats.damageMult * weaponDmgMult * starDmgBonus; 
+    if (activeRelics.infiniteBandolier) finalDamage *= 1.3;
+    if (activeRelics.demonPact) finalDamage *= 1.6;
+    if (activeRelics.soulReaper) finalDamage *= (1 + (Math.floor(soulReaperKills / 50) * 0.01));
+    let finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * wFrBonus * sessionStats.fireRateMult * weaponFrMult));
+    if (activeRelics.glassCannon) finalFireRate = Math.max(1, Math.floor(finalFireRate * 0.7));
+
+    let baseBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal;
+    if (activeRelics.glassCannon) baseBullets += 2;
+    let bulletMult = sessionStats.weaponMods[currentWeapon]?.bulletMult || 1.0;
+    let finalBullets = Math.round(baseBullets * bulletMult);
+    return finalDamage * finalBullets * (60 / finalFireRate);
+}
 
 function updateUI() {
     document.getElementById('goldDisplay').innerText = gold;
     let displayMaxHp = (state === 'MENU' || state === 'SHOP' && previousState === 'MENU') ? calculateMaxHp() : maxHp;
     let displayHp = (state === 'MENU' || state === 'SHOP' && previousState === 'MENU') ? displayMaxHp : Math.max(0, hp);
-    
     document.getElementById('hpDisplay').innerText = `${displayHp.toFixed(2)} / ${displayMaxHp.toFixed(2)}`;
     document.getElementById('shopGoldDisplay').innerText = gold;
     document.getElementById('levelDisplay').innerText = sessionLevel; document.getElementById('expDisplay').innerText = `${Math.floor(sessionExp)} / ${sessionMaxExp}`;
     
-    const currentDmg = getCurrentDPS() / (WEAPONS[currentWeapon].bullets * (60 / Math.max(1, Math.floor(WEAPONS[currentWeapon].fireRate * globalStats.fireRateMult * Math.pow(0.95, (weaponUpgrades[currentWeapon]?.frLvl||1)-1))))); 
-    document.getElementById('dmgDisplay').innerText = currentDmg.toFixed(1);
-    
+    document.getElementById('dmgDisplay').innerText = getCurrentDPS().toFixed(1);
     const slotDisplay = document.getElementById('activeSlotDisplay');
     if (activeSlot === 'main') { slotDisplay.innerText = `主武器 (${WEAPONS[currentWeapon].name})`; slotDisplay.style.color = '#00d2ff';
     } else { slotDisplay.innerText = `防禦型態 (${OFFHANDS[currentOffhand].name})`; slotDisplay.style.color = '#4caf50'; }
+    
+    if (currentOffhand === 'shield' && shieldLvl >= 2) {
+        document.getElementById('shieldSkillDisplay').style.display = 'block';
+        if (shieldSkillCooldownTimer > 0) {
+            document.getElementById('shieldCooldownText').innerText = `冷卻中 (${Math.ceil(shieldSkillCooldownTimer/60)}s)`;
+            document.getElementById('shieldCooldownText').style.color = '#f44336';
+        } else {
+            document.getElementById('shieldCooldownText').innerText = `準備就緒`;
+            document.getElementById('shieldCooldownText').style.color = '#4caf50';
+        }
+    } else {
+        document.getElementById('shieldSkillDisplay').style.display = 'none';
+    }
     
     if(isMultiplayer && roomPlayers) {
         document.getElementById('mpCountHud').innerText = Object.keys(roomPlayers).length;
@@ -679,7 +812,8 @@ document.getElementById('shopTabOffhandBtn').addEventListener('click', () => {
 function updateShopUI() {
     const towerCost = WEAPONS[currentWeapon].cost;
     for (const [key, weapon] of Object.entries(WEAPONS)) {
-        const btn = document.getElementById(`btn_${key}`); if (!btn) continue;
+        const btn = document.getElementById(`btn_${key}`);
+        if (!btn) continue;
         if (currentWeapon === key) { btn.innerText = "已裝備"; btn.disabled = true; btn.style.background = "#4caf50"; btn.style.color = "white"; } 
         else if (unlockedWeapons.includes(key)) {
             if (previousState === 'PAUSED') { btn.innerText = "戰鬥中鎖定"; btn.disabled = true; btn.style.background = "#666"; btn.style.color = "#ccc"; } 
@@ -702,6 +836,22 @@ function updateShopUI() {
         }
     }
 
+    if (unlockedOffhands.includes('shield')) {
+        document.getElementById('shieldUpgContainer').style.display = 'flex';
+        document.getElementById('shieldLvlDisplay').innerText = `目前等級: ${shieldLvl}`;
+        if(shieldLvl >= 2) document.getElementById('shieldCooldownDesc').innerText = `${60 - (shieldLvl * 2 - 4)}秒`;
+        else document.getElementById('shieldCooldownDesc').innerText = `無`;
+
+        const shieldUpgBtn = document.getElementById('upgShieldBtn');
+        if(shieldLvl >= 10) {
+            shieldUpgBtn.innerText = "滿級"; shieldUpgBtn.disabled = true; shieldUpgBtn.style.background = "#4caf50";
+        } else {
+            let cost = Math.floor(10000 * Math.pow(1.5, shieldLvl - 1));
+            shieldUpgBtn.innerText = `${cost} 金幣`;
+            shieldUpgBtn.disabled = gold < cost; shieldUpgBtn.style.background = gold >= cost ? "#00d2ff" : "#444";
+        }
+    }
+
     if (hasDefeatedFinalBoss) {
         document.getElementById('shield2_container').style.display = 'flex';
         const s2Btn = document.getElementById('btn_shield2');
@@ -713,12 +863,32 @@ function updateShopUI() {
     }
     
     document.getElementById('shopCurrentWeaponName').innerText = WEAPONS[currentWeapon].name;
-    const wUpg = weaponUpgrades[currentWeapon]; const wDmgCost = calculateWeaponUpgradeCost(200, towerCost, wUpg.dmgLvl); const wFrCost = calculateWeaponUpgradeCost(200, towerCost, wUpg.frLvl); const wHpCost = calculateWeaponUpgradeCost(300, towerCost, wUpg.hpLvl);
-    document.getElementById('w_dmgLvl').innerText = `目前等級: ${wUpg.dmgLvl} / 10`; document.getElementById('w_frLvl').innerText = `目前等級: ${wUpg.frLvl} / 10`; document.getElementById('w_hpLvl').innerText = `目前等級: ${wUpg.hpLvl} / 10`;
+    const wUpg = weaponUpgrades[currentWeapon]; 
+    const wDmgCost = calculateWeaponUpgradeCost(200, towerCost, wUpg.dmgLvl); const wFrCost = calculateWeaponUpgradeCost(200, towerCost, wUpg.frLvl); const wHpCost = calculateWeaponUpgradeCost(300, towerCost, wUpg.hpLvl);
+    
+    const star = weaponStars[currentWeapon] || 0;
+    const maxLvl = 10 + star * 5;
 
-    const btnWDmg = document.getElementById('upg_w_dmgBtn'); if (wUpg.dmgLvl >= 10) { btnWDmg.innerText = "特殊突破(暫未開放)"; btnWDmg.disabled = true; } else { btnWDmg.innerText = `${wDmgCost} 金幣`; btnWDmg.disabled = gold < wDmgCost; btnWDmg.style.background = gold >= wDmgCost ? "#00d2ff" : "#444"; btnWDmg.style.color = gold >= wDmgCost ? "#111" : "white"; }
-    const btnWFr = document.getElementById('upg_w_frBtn'); if (wUpg.frLvl >= 10) { btnWFr.innerText = "特殊突破(暫未開放)"; btnWFr.disabled = true; } else { btnWFr.innerText = `${wFrCost} 金幣`; btnWFr.disabled = gold < wFrCost; btnWFr.style.background = gold >= wFrCost ? "#00d2ff" : "#444"; btnWFr.style.color = gold >= wFrCost ? "#111" : "white"; }
-    const btnWHp = document.getElementById('upg_w_hpBtn'); if (wUpg.hpLvl >= 10) { btnWHp.innerText = "特殊突破(暫未開放)"; btnWHp.disabled = true; } else { btnWHp.innerText = `${wHpCost} 金幣`; btnWHp.disabled = gold < wHpCost; btnWHp.style.background = gold >= wHpCost ? "#00d2ff" : "#444"; btnWHp.style.color = gold >= wHpCost ? "#111" : "white"; }
+    document.getElementById('w_dmgLvl').innerText = `目前等級: ${wUpg.dmgLvl} / ${maxLvl}`; document.getElementById('w_frLvl').innerText = `目前等級: ${wUpg.frLvl} / ${maxLvl}`; document.getElementById('w_hpLvl').innerText = `目前等級: ${wUpg.hpLvl} / ${maxLvl}`;
+
+    const btnWDmg = document.getElementById('upg_w_dmgBtn'); if (wUpg.dmgLvl >= maxLvl) { btnWDmg.innerText = "已達上限"; btnWDmg.disabled = true; } else { btnWDmg.innerText = `${wDmgCost} 金幣`; btnWDmg.disabled = gold < wDmgCost; btnWDmg.style.background = gold >= wDmgCost ? "#00d2ff" : "#444"; btnWDmg.style.color = gold >= wDmgCost ? "#111" : "white"; }
+    const btnWFr = document.getElementById('upg_w_frBtn'); if (wUpg.frLvl >= maxLvl) { btnWFr.innerText = "已達上限"; btnWFr.disabled = true; } else { btnWFr.innerText = `${wFrCost} 金幣`; btnWFr.disabled = gold < wFrCost; btnWFr.style.background = gold >= wFrCost ? "#00d2ff" : "#444"; btnWFr.style.color = gold >= wFrCost ? "#111" : "white"; }
+    const btnWHp = document.getElementById('upg_w_hpBtn'); if (wUpg.hpLvl >= maxLvl) { btnWHp.innerText = "已達上限"; btnWHp.disabled = true; } else { btnWHp.innerText = `${wHpCost} 金幣`; btnWHp.disabled = gold < wHpCost; btnWHp.style.background = gold >= wHpCost ? "#00d2ff" : "#444"; btnWHp.style.color = gold >= wHpCost ? "#111" : "white"; }
+
+    // 星級系統
+    const frags = weaponFragments[currentWeapon] || 0;
+    const starCost = star + 1;
+    document.getElementById('w_starDisplay').innerText = `目前星級: ${star} | 碎片: ${frags} / ${starCost}`;
+    const btnWStar = document.getElementById('upg_w_starBtn');
+    if (wUpg.dmgLvl >= maxLvl && wUpg.frLvl >= maxLvl && wUpg.hpLvl >= maxLvl) {
+        if (frags >= starCost) {
+            btnWStar.innerText = "升星"; btnWStar.disabled = false; btnWStar.style.background = "#ff9800";
+        } else {
+            btnWStar.innerText = "碎片不足"; btnWStar.disabled = true; btnWStar.style.background = "#666";
+        }
+    } else {
+        btnWStar.innerText = "需先滿級"; btnWStar.disabled = true; btnWStar.style.background = "#666";
+    }
 
     document.getElementById('fireRateLvl').innerText = `目前等級: ${globalStats.fireRateLvl}`; document.getElementById('damageLvl').innerText = `目前等級: ${globalStats.damageLvl}`; document.getElementById('hpLvl').innerText = `目前等級: ${globalStats.hpLvl}`;
     const frBtn = document.getElementById('upgFireRateBtn'); frBtn.innerText = `${upgradeCosts.fireRate} 金幣`; frBtn.disabled = gold < upgradeCosts.fireRate;
@@ -740,29 +910,95 @@ window.buyShield2 = function() {
     if (previousState === 'PAUSED') return;
     if (gold >= 50000) { gold -= 50000; unlockedOffhands.push('shield2'); saveGameData(); updateShopUI(); updateUI(); }
 };
+document.getElementById('upg_w_dmgBtn').addEventListener('click', () => { const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost; const cost = calculateWeaponUpgradeCost(200, towerCost, wUpg.dmgLvl); const maxLvl = 10 + (weaponStars[currentWeapon]||0)*5; if (gold >= cost && wUpg.dmgLvl < maxLvl) { gold -= cost; wUpg.dmgLvl++; saveGameData(); updateShopUI(); updateUI(); } });
+document.getElementById('upg_w_frBtn').addEventListener('click', () => { const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost; const cost = calculateWeaponUpgradeCost(200, towerCost, wUpg.frLvl); const maxLvl = 10 + (weaponStars[currentWeapon]||0)*5; if (gold >= cost && wUpg.frLvl < maxLvl) { gold -= cost; wUpg.frLvl++; saveGameData(); updateShopUI(); updateUI(); } });
+document.getElementById('upg_w_hpBtn').addEventListener('click', () => { const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost; const cost = calculateWeaponUpgradeCost(300, towerCost, wUpg.hpLvl); const maxLvl = 10 + (weaponStars[currentWeapon]||0)*5; if (gold >= cost && wUpg.hpLvl < maxLvl) { gold -= cost; wUpg.hpLvl++; saveGameData(); updateShopUI(); updateUI(); } });
 
-document.getElementById('upg_w_dmgBtn').addEventListener('click', () => { const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost; const cost = calculateWeaponUpgradeCost(200, towerCost, wUpg.dmgLvl); if (gold >= cost && wUpg.dmgLvl < 10) { gold -= cost; wUpg.dmgLvl++; saveGameData(); updateShopUI(); updateUI(); } });
-document.getElementById('upg_w_frBtn').addEventListener('click', () => { const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost; const cost = calculateWeaponUpgradeCost(200, towerCost, wUpg.frLvl); if (gold >= cost && wUpg.frLvl < 10) { gold -= cost; wUpg.frLvl++; saveGameData(); updateShopUI(); updateUI(); } });
-document.getElementById('upg_w_hpBtn').addEventListener('click', () => { const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost; const cost = calculateWeaponUpgradeCost(300, towerCost, wUpg.hpLvl); if (gold >= cost && wUpg.hpLvl < 10) { gold -= cost; wUpg.hpLvl++; saveGameData(); updateShopUI(); updateUI(); } });
+document.getElementById('upgShieldBtn').addEventListener('click', () => {
+    let cost = Math.floor(10000 * Math.pow(1.5, shieldLvl - 1));
+    if (gold >= cost && shieldLvl < 10) {
+        gold -= cost; shieldLvl++; saveGameData(); updateShopUI(); updateUI();
+    }
+});
+
+document.getElementById('upg_w_starBtn').addEventListener('click', () => {
+    let star = weaponStars[currentWeapon] || 0;
+    let cost = star + 1;
+    if (weaponFragments[currentWeapon] >= cost) {
+        weaponFragments[currentWeapon] -= cost;
+        weaponStars[currentWeapon] = star + 1;
+        saveGameData(); updateShopUI(); updateUI();
+    }
+});
+
 document.getElementById('upgFireRateBtn').addEventListener('click', () => { if (gold >= upgradeCosts.fireRate) { gold -= upgradeCosts.fireRate; globalStats.fireRateMult *= 0.92; globalStats.fireRateLvl++; upgradeCosts.fireRate = Math.floor(upgradeCosts.fireRate * 1.5); saveGameData(); updateShopUI(); updateUI(); } });
 document.getElementById('upgDamageBtn').addEventListener('click', () => { if (gold >= upgradeCosts.damage) { gold -= upgradeCosts.damage; globalStats.damageMult += 0.10; globalStats.damageLvl++; upgradeCosts.damage = Math.floor(upgradeCosts.damage * 1.5); saveGameData(); updateShopUI(); updateUI(); } });
 document.getElementById('upgHpBtn').addEventListener('click', () => { if (gold >= upgradeCosts.hp) { gold -= upgradeCosts.hp; globalStats.hpMult += 0.10; globalStats.hpLvl++; upgradeCosts.hp = Math.floor(upgradeCosts.hp * 1.5); saveGameData(); updateShopUI(); updateUI(); } });
 function openShop(fromState) { previousState = fromState; state = 'SHOP'; showMenu('shop'); updateShopUI(); updateUI(); }
 document.getElementById('closeShopBtn').addEventListener('click', () => { state = previousState; if (state === 'MENU') showMenu('main'); else if (state === 'PAUSED') showMenu('pause'); saveGameData(); });
 
+// ─── 抽獎中心邏輯 ───
+document.getElementById('toGachaBtn').addEventListener('click', () => { openGachaMenu(); });
+document.getElementById('closeGachaBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); saveGameData(); });
+function openGachaMenu() {
+    state = 'GACHA'; showMenu('gacha'); updateGachaUI();
+}
+function updateGachaUI() {
+    document.getElementById('gachaPointsDisplay').innerText = gachaPoints;
+    let cost = 10 + totalDraws;
+    document.getElementById('gachaCostDisplay').innerText = cost;
+    document.getElementById('drawGachaBtn').disabled = gachaPoints < cost;
+
+    let fragHtml = '';
+    unlockedWeapons.forEach(w => {
+        let count = weaponFragments[w] || 0;
+        let star = weaponStars[w] || 0;
+        fragHtml += `<div class="fragment-item"><span>${WEAPONS[w].name}</span><small>碎片: ${count} | 星級: ${star}</small></div>`;
+    });
+    document.getElementById('fragmentsList').innerHTML = fragHtml || '<p style="color:#aaa;">還沒有解鎖任何武器</p>';
+}
+document.getElementById('drawGachaBtn').addEventListener('click', () => {
+    let cost = 10 + totalDraws;
+    if (gachaPoints < cost) return;
+    if (unlockedWeapons.length === 0) return alert("請先解鎖武器！");
+    
+    gachaPoints -= cost;
+    totalDraws++;
+
+    let pool = unlockedWeapons;
+    let totalWeight = 0;
+    let weights = pool.map(w => {
+        let wCost = WEAPONS[w].cost || 100;
+        let weight = 10000 / wCost;
+        totalWeight += weight;
+        return weight;
+    });
+
+    let rand = Math.random() * totalWeight;
+    let current = 0;
+    let selected = pool[0];
+    for (let i = 0; i < pool.length; i++) {
+        current += weights[i];
+        if (rand <= current) { selected = pool[i]; break; }
+    }
+
+    weaponFragments[selected] = (weaponFragments[selected] || 0) + 1;
+    saveGameData(); updateGachaUI();
+    alert(`🎉 恭喜抽中【${WEAPONS[selected].name}】碎片 x1！`);
+});
+
 // ─── 綁定所有主選單與暫停選單按鈕 ───
 document.getElementById('startBtn').addEventListener('click', () => { isMultiplayer = false; initGame(); });
 document.getElementById('toShopBtn').addEventListener('click', () => openShop('MENU'));
 document.getElementById('toShopFromGameBtn').addEventListener('click', () => openShop('PAUSED'));
 document.getElementById('pauseBtn').addEventListener('click', () => { state = 'PAUSED'; saveGameData(); showMenu('pause'); });
-document.getElementById('resumeBtn').addEventListener('click', () => { state = 'PLAYING'; showMenu('playing'); animate(); });
+document.getElementById('resumeBtn').addEventListener('click', () => { state = 'PLAYING'; showMenu('playing'); animId = requestAnimationFrame(animate); });
 document.getElementById('backToHomeFromPause').addEventListener('click', () => { if(isMultiplayer) leaveRoom(false); state = 'MENU'; saveGameData(); showMenu('main'); });
 document.getElementById('restartBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
 document.getElementById('clearSaveBtn').addEventListener('click', clearGameData);
 document.getElementById('backToHomeVictoryBtn').addEventListener('click', () => { if(isMultiplayer) leaveRoom(false); state = 'MENU'; showMenu('main'); });
-document.getElementById('enterEndlessBtn').addEventListener('click', () => { isEndless = true; currentWave++; saveGameData(); startWave(); animate(); });
-
-document.getElementById('exportSaveBtn').addEventListener('click', () => { const data = { gold, unlockedWeapons, currentWeapon, unlockedOffhands, currentOffhand, defeatedMonsters, hasDefeatedFinalBoss, settingShowBossUI, globalStats, weaponUpgrades, upgradeCosts, maxDifficultyUnlocked }; prompt(`請複製以下這串【${currentUser}】的備份代碼：`, btoa(encodeURIComponent(JSON.stringify(data)))); });
+document.getElementById('enterEndlessBtn').addEventListener('click', () => { isEndless = true; currentWave++; saveGameData(); startWave(); animId = requestAnimationFrame(animate); });
+document.getElementById('exportSaveBtn').addEventListener('click', () => { const data = { gold, unlockedWeapons, currentWeapon, unlockedOffhands, currentOffhand, defeatedMonsters, hasDefeatedFinalBoss, settingShowBossUI, globalStats, weaponUpgrades, upgradeCosts, maxDifficultyUnlocked, gachaPoints, totalDraws, killCounters, weaponFragments, weaponStars, shieldLvl }; prompt(`請複製以下這串【${currentUser}】的備份代碼：`, btoa(encodeURIComponent(JSON.stringify(data)))); });
 document.getElementById('importSaveBtn').addEventListener('click', () => {
     const inputData = prompt(`請貼上要覆蓋給【${currentUser}】的存檔代碼：`);
     if (inputData) {
@@ -772,17 +1008,19 @@ document.getElementById('importSaveBtn').addEventListener('click', () => {
             unlockedOffhands = data.unlockedOffhands ?? []; currentOffhand = data.currentOffhand ?? 'none'; defeatedMonsters = data.defeatedMonsters ?? []; hasDefeatedFinalBoss = data.hasDefeatedFinalBoss ?? false;
             settingShowBossUI = data.settingShowBossUI !== undefined ? data.settingShowBossUI : true;
             globalStats = data.globalStats ?? { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1, hpMult: 1.0, hpLvl: 1 }; maxDifficultyUnlocked = data.maxDifficultyUnlocked ?? 1;
-            if (globalStats.hpMult === undefined) globalStats.hpMult = 1.0; if (globalStats.hpLvl === undefined) globalStats.hpLvl = 1;
+            if (globalStats.hpMult === undefined) globalStats.hpMult = 1.0;
+            if (globalStats.hpLvl === undefined) globalStats.hpLvl = 1;
             weaponUpgrades = data.weaponUpgrades ?? { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } };
             Object.keys(WEAPONS).forEach(k => { if (!weaponUpgrades[k]) weaponUpgrades[k] = { dmgLvl: 1, frLvl: 1, hpLvl: 1 }; });
+            
+            gachaPoints = data.gachaPoints ?? 0; totalDraws = data.totalDraws ?? 0; killCounters = data.killCounters ?? {}; weaponFragments = data.weaponFragments ?? {}; weaponStars = data.weaponStars ?? {}; shieldLvl = data.shieldLvl ?? 1;
+
             saveGameData(); alert("匯入並上傳雲端成功！"); location.reload();
         } catch (e) { alert("匯入失敗！代碼錯誤。"); }
     }
 });
-
 document.getElementById('showProbBtn').addEventListener('click', () => { state = 'PROB'; showMenu('prob'); renderProbabilities(); renderBestiary(); });
 document.getElementById('closeProbBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
-
 document.getElementById('probTabUpgBtn').addEventListener('click', () => {
     document.getElementById('probTabUpgBtn').classList.add('active-tab'); document.getElementById('probTabBestiaryBtn').classList.remove('active-tab');
     document.getElementById('probUpgSection').classList.remove('hidden'); document.getElementById('probBestiarySection').classList.add('hidden');
@@ -792,12 +1030,10 @@ document.getElementById('probTabBestiaryBtn').addEventListener('click', () => {
     document.getElementById('probBestiarySection').classList.remove('hidden'); document.getElementById('probUpgSection').classList.add('hidden');
     renderBestiary();
 });
-
 // --- 多人連線大廳 ---
 document.getElementById('multiplayerBtn').addEventListener('click', () => { state = 'MP_MENU'; showMenu('mpMenu'); fetchRoomList(); autoRefreshTimer = setInterval(() => { refreshCountdown--; document.getElementById('refreshTimer').innerText = refreshCountdown; if(refreshCountdown <= 0) { fetchRoomList(); refreshCountdown = 10; } }, 1000); });
 document.getElementById('backToMainFromMp').addEventListener('click', () => { clearInterval(autoRefreshTimer); state = 'MENU'; showMenu('main'); });
 document.getElementById('refreshRoomsBtn').addEventListener('click', () => { fetchRoomList(); refreshCountdown = 10; document.getElementById('refreshTimer').innerText = refreshCountdown; });
-
 async function fetchRoomList() {
     const container = document.getElementById('roomListContainer'); container.innerHTML = '<p style="color:#aaa; text-align:center;">讀取中...</p>';
     try {
@@ -810,7 +1046,8 @@ async function fetchRoomList() {
             if (pCount >= 12) joinBtn = `<button class="menu-btn secondary-btn" style="min-width: 100px; padding: 8px 15px; font-size: 16px;" disabled>客滿</button>`;
             else if (maxDifficultyUnlocked < r.difficulty) joinBtn = `<button class="menu-btn danger-btn" style="min-width: 100px; padding: 8px 15px; font-size: 16px;" disabled>難度不足</button>`;
             html += `<div class="room-card"><div class="room-info"><span style="font-size:20px; font-weight:bold; color:#00d2ff;">房主: ${r.host}</span><span style="font-size:14px; color:#aaa;">難度: ${r.difficulty} | 人數: ${pCount}/12</span></div>${joinBtn}</div>`;
-        }); container.innerHTML = html;
+        });
+        container.innerHTML = html;
     } catch(e) { container.innerHTML = '<p style="color:red; text-align:center;">連線錯誤</p>'; }
 }
 
@@ -819,13 +1056,11 @@ document.getElementById('createRoomBtn').addEventListener('click', async () => {
     await newRoomRef.set({ host: currentUser, status: 'waiting', difficulty: selectedDifficulty, wave: 1, players: { [userKey]: { email: currentUser, maxDiff: maxDifficultyUnlocked, angle: 0, weapon: currentWeapon, isShooting: false } } });
     enterLobby();
 });
-
 window.joinRoom = async function(rId) {
     isMultiplayer = true; isHost = false; currentRoomId = rId;
     await db.collection('rooms').doc(rId).update({ [`players.${userKey}`]: { email: currentUser, maxDiff: maxDifficultyUnlocked, angle: 0, weapon: currentWeapon, isShooting: false } });
     enterLobby();
 };
-
 function enterLobby() {
     clearInterval(autoRefreshTimer); state = 'LOBBY'; showMenu('lobby'); document.getElementById('lobbyHostDisplay').innerText = isHost ? currentUser : "連線中...";
     unsubscribeRoom = db.collection('rooms').doc(currentRoomId).onSnapshot(doc => {
@@ -845,7 +1080,8 @@ function enterLobby() {
             if (roomData.difficulty > maxAllowedDiff) { db.collection('rooms').doc(currentRoomId).update({ difficulty: maxAllowedDiff }); document.getElementById('lobbyDiffWarning').innerText = `⚠️ 配合隊伍限制，難度已降至 ${maxAllowedDiff}`;
             } else { document.getElementById('lobbyDiffWarning').innerText = ''; }
         } else {
-            document.getElementById('lobbyDiffMinus').disabled = true; document.getElementById('lobbyDiffPlus').disabled = true;
+            document.getElementById('lobbyDiffMinus').disabled = true;
+            document.getElementById('lobbyDiffPlus').disabled = true;
             document.getElementById('lobbyStartBtn').disabled = true; document.getElementById('lobbyStartBtn').innerText = "等待房主開始...";
         }
         if (roomData.status === 'playing' && state === 'LOBBY') { selectedDifficulty = roomData.difficulty; initGame(); }
@@ -857,45 +1093,44 @@ document.getElementById('lobbyDiffMinus').addEventListener('click', () => { if(i
 document.getElementById('lobbyDiffPlus').addEventListener('click', () => { if(isHost) { let maxDiff = Math.min(...Object.values(roomPlayers).map(p=>p.maxDiff)); if(roomData.difficulty < maxDiff) db.collection('rooms').doc(currentRoomId).update({ difficulty: roomData.difficulty + 1 }); } });
 document.getElementById('lobbyLeaveBtn').addEventListener('click', () => leaveRoom(false));
 document.getElementById('lobbyStartBtn').addEventListener('click', () => { if(isHost) db.collection('rooms').doc(currentRoomId).update({ status: 'playing', wave: 1 }); });
-
 async function leaveRoom(wasKicked = false) {
     if (unsubscribeRoom) unsubscribeRoom();
     if (currentRoomId && roomData) {
         if (isHost) { await db.collection('rooms').doc(currentRoomId).delete(); } 
         else { await db.collection('rooms').doc(currentRoomId).update({ [`players.${userKey}`]: firebase.firestore.FieldValue.delete() }); }
     }
-    isMultiplayer = false; isHost = false; currentRoomId = null; roomData = null; if(syncIntervalTimer) clearInterval(syncIntervalTimer);
+    isMultiplayer = false; isHost = false; currentRoomId = null; roomData = null;
+    if(syncIntervalTimer) clearInterval(syncIntervalTimer);
     if(wasKicked) alert("房間已關閉或連線中斷。"); state = 'MP_MENU'; showMenu('mpMenu'); fetchRoomList();
 }
 
 // ─── 遺物獻祭系統 UI 邏輯 ───
 function showRelicUI() {
-    state = 'RELIC_SELECT'; 
+    state = 'RELIC_SELECT';
     let availableRelics = RELIC_DATA.filter(r => !activeRelics[r.id]);
-    
     if (availableRelics.length === 0) { skipRelic(); return; }
     
     availableRelics.sort(() => 0.5 - Math.random());
     let choices = availableRelics.slice(0, 3);
-    
     const container = document.getElementById('relicContainer');
     container.innerHTML = ''; 
     
     choices.forEach(relic => {
-        const isLethal = maxHp <= relic.cost; 
+        const costVal = typeof relic.cost === 'function' ? relic.cost(selectedDifficulty) : relic.cost;
+        const descText = typeof relic.desc === 'function' ? relic.desc(selectedDifficulty) : relic.desc;
+        const isLethal = maxHp <= costVal; 
         const costColor = isLethal ? '#ff4444' : '#ff9999';
         
         let card = document.createElement('div');
         card.style.cssText = "flex: 1; background: #222; border: 1px solid #555; padding: 15px; border-radius: 8px; cursor: pointer; transition: 0.2s;";
         card.innerHTML = `
             <h3 style="color: #ffa500; margin-top: 0; margin-bottom: 10px;">${relic.name}</h3>
-            <p style="font-size: 14px; color: #ddd; min-height: 60px; margin: 0 0 10px 0;">${relic.desc}</p>
-            <p style="font-size: 16px; color: ${costColor}; font-weight: bold; margin: 0;">代價: -${relic.cost} 最大血量</p>
+            <p style="font-size: 14px; color: #ddd; min-height: 60px; margin: 0 0 10px 0;">${descText}</p>
+            <p style="font-size: 16px; color: ${costColor}; font-weight: bold; margin: 0;">代價: -${costVal} 最大血量</p>
         `;
-        
         card.onmouseover = () => card.style.borderColor = '#ff4444';
         card.onmouseout = () => card.style.borderColor = '#555';
-        card.onclick = () => selectRelic(relic.id, relic.cost);
+        card.onclick = () => selectRelic(relic.id, costVal);
         container.appendChild(card);
     });
     
@@ -904,7 +1139,7 @@ function showRelicUI() {
 
 window.selectRelic = function(id, cost) {
     maxHp -= cost;
-    if (maxHp < 1) maxHp = 1; 
+    if (maxHp < 1) maxHp = 1;
     if (hp > maxHp) hp = maxHp;
     
     activeRelics[id] = true;
@@ -918,8 +1153,10 @@ window.skipRelic = function() {
 
 function resumeGameAfterRelic() {
     document.getElementById('relicUI').style.display = 'none';
-    state = 'PLAYING';
-    animate(); 
+    if (state !== 'PLAYING') {
+        state = 'PLAYING';
+        animId = requestAnimationFrame(animate); 
+    }
 }
 
 // --- 遊戲邏輯 ---
@@ -933,15 +1170,14 @@ function getAngleFromKeys(up, down, left, right, defaultAngle) {
 
 function initGame() {
     currentWave = 1; isEndless = false; maxHp = calculateMaxHp(); hp = maxHp;
-    frames = 0; myLastShotFrame = 0; myNextShotFrame = 0; 
+    frames = 0; myLastShotFrame = 0; myNextShotFrame = 0; shieldSkillCooldownTimer = 0;
     sessionGold = 0; sessionExp = 0; sessionLevel = 1; sessionMaxExp = 10;
     activeSlot = 'main'; sessionBossKills = { mini: 0, big: 0, final_boss: 0 };
-    playerHasTempShield = false; tempShieldAngle = 0; shopShieldAngle = 0; shield2SyncActive = false; shield2SyncTimer = 0; lastShield2SyncFrame = -9999;
+    playerHasTempShield = false;
+    tempShieldAngle = 0; shopShieldAngle = 0; shield2SyncActive = false; shield2SyncTimer = 0; lastShield2SyncFrame = -9999;
     
-    // 重置遺物系統
     bossKillsForRelic = 0; soulReaperKills = 0;
     activeRelics = { demonPact: false, glassCannon: false, greedSkull: false, absoluteZero: false, thorns: false, giantSlayer: false, radiantAura: false, timeWarp: false, infiniteBandolier: false, soulReaper: false };
-
     sessionStats = { damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, frostMagazineLevel: 0, weaponMods: { pistol: { extraBullets: 0, dmgMult: 1.0 }, machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0, bulletMult: 1.0 } } };
     bullets = []; enemyBullets = []; enemies = []; 
     
@@ -955,16 +1191,16 @@ function initGame() {
         }, 100);
     }
     
-    updateUI(); startWave(); animate();
+    updateUI(); startWave(); animId = requestAnimationFrame(animate);
 }
 
 function startWave() {
-    enemiesToSpawn = []; let normalCount = Math.floor(10 + currentWave * 2 * selectedDifficulty); let miniCount = 0; let bigCount = 0; let rangedCount = 0; let finalCount = 0;
-    
+    enemiesToSpawn = []; let normalCount = Math.floor(10 + currentWave * 2 * selectedDifficulty);
+    let miniCount = 0; let bigCount = 0; let rangedCount = 0; let finalCount = 0;
     if (!isEndless) { 
         if (currentWave === 30 && selectedDifficulty >= 2) { finalCount = 1; }
-        else if (currentWave % 10 === 0) bigCount = 1; 
-        else if (currentWave % 5 === 0) miniCount = 1; 
+        else if (currentWave % 10 === 0) bigCount = 1;
+        else if (currentWave % 5 === 0) miniCount = 1;
     } else { 
         if (currentWave % 5 === 0 && currentWave % 10 !== 0) { miniCount = 1 + Math.floor((currentWave - 30) / 5); }
         if (currentWave % 10 === 0) {
@@ -975,7 +1211,8 @@ function startWave() {
     }
     
     if (selectedDifficulty >= 2) {
-        let actualNormal = 0; let spawnChance = Math.min(0.5, 0.01 * selectedDifficulty * (currentWave / ((currentWave + 5) / currentWave)));
+        let actualNormal = 0;
+        let spawnChance = Math.min(0.5, 0.01 * selectedDifficulty * (currentWave / ((currentWave + 5) / currentWave)));
         for (let i = 0; i < normalCount; i++) { if (Math.random() < spawnChance) { rangedCount++; } else { actualNormal++; } }
         normalCount = actualNormal;
     }
@@ -991,14 +1228,14 @@ function startWave() {
 
     let normalEnemies = []; let bossEnemies = [];
     for(let i=0; i<normalCount; i++) normalEnemies.push('normal'); for(let i=0; i<rangedCount; i++) normalEnemies.push('ranged');
-    normalEnemies.sort(() => Math.random() - 0.5); 
+    normalEnemies.sort(() => Math.random() - 0.5);
     for(let i=0; i<miniCount; i++) bossEnemies.push('mini'); for(let i=0; i<bigCount; i++) bossEnemies.push('big'); for(let i=0; i<finalCount; i++) bossEnemies.push('final_boss');
     bossEnemies.sort(() => Math.random() - 0.5);
-    
     enemiesToSpawn = normalEnemies.concat(bossEnemies);
 
     let targetTimeSec = 20; let isBossWave = (currentWave % 10 === 0);
-    if (!isEndless) { targetTimeSec = isBossWave ? 30 : 20; } else { let progress = Math.min(1, (currentWave - 30) / 70); let baseTime = 20 - (17 * progress); targetTimeSec = isBossWave ? baseTime * 1.5 : baseTime; targetTimeSec = Math.max(isBossWave ? 4.5 : 3, targetTimeSec); }
+    if (!isEndless) { targetTimeSec = isBossWave ? 30 : 20; } 
+    else { let progress = Math.min(1, (currentWave - 30) / 70); let baseTime = 20 - (17 * progress); targetTimeSec = isBossWave ? baseTime * 1.5 : baseTime; targetTimeSec = Math.max(isBossWave ? 4.5 : 3, targetTimeSec); }
     let totalFramesAllowed = targetTimeSec * 60;
     if (enemiesToSpawn.length > 0) { waveSpawnInterval = Math.max(1, Math.floor(totalFramesAllowed / enemiesToSpawn.length)); } else { waveSpawnInterval = 60; }
     
@@ -1009,7 +1246,7 @@ function handleWaveClear() {
     bullets = []; enemyBullets = []; playerHasTempShield = false; document.getElementById('bossUI').style.display = 'none';
     if (currentWave === 30 && !isEndless) { 
         if (selectedDifficulty === maxDifficultyUnlocked) { maxDifficultyUnlocked++; document.getElementById('shopTabOffhandBtn').classList.remove('hidden'); }
-        saveGameData(); state = 'VICTORY'; showMenu('victory'); 
+        saveGameData(); state = 'VICTORY'; showMenu('victory');
     } else { 
         currentWave++; 
         if (isMultiplayer && isHost) db.collection('rooms').doc(currentRoomId).update({ wave: currentWave });
@@ -1018,12 +1255,15 @@ function handleWaveClear() {
 }
 
 function renderProbabilities() {
-    const probList = document.getElementById('probList'); let totalWeight = 0; for (const val of Object.values(RARITIES)) { totalWeight += val.weight; }
-    const sorted = Object.entries(RARITIES).sort((a, b) => b[1].weight - a[1].weight); let html = '';
+    const probList = document.getElementById('probList'); let totalWeight = 0;
+    for (const val of Object.values(RARITIES)) { totalWeight += val.weight; }
+    const sorted = Object.entries(RARITIES).sort((a, b) => b[1].weight - a[1].weight);
+    let html = '';
     sorted.forEach(([key, val]) => {
         let percentage = ((val.weight / totalWeight) * 100).toFixed(2); let extraNote = key === '獨家' ? '<div style="font-size: 12px; color: #aaa; margin-left: 70px; margin-top: 2px;">(隨抽取次數機率遞減)</div>' : '';
         html += `<div class="prob-row" onclick="showRarityDetails('${key}')" id="prob_row_${key}"><div style="font-size: 20px; display: flex; align-items: center;"><span style="color: ${val.color}; font-weight: bold; width: 60px; display: inline-block; text-shadow: 0 0 3px ${val.color};">${key}</span><span style="color: white; margin-left: 10px;">${percentage} %</span></div>${extraNote}</div>`;
-    }); probList.innerHTML = html;
+    });
+    probList.innerHTML = html;
 }
 
 function renderBestiary() {
@@ -1036,7 +1276,6 @@ function renderBestiary() {
         • Boss怪金幣 = 基礎金幣 * (最終血量 / 基礎倍率) * 難度 * 0.38<br>
         <span style="font-size: 12px; color: #aaa;">(未解鎖的怪物擊殺後才會顯示詳細資訊)</span>
     </div>`;
-
     for (const [key, data] of Object.entries(MONSTER_DATA)) {
         if (defeatedMonsters.includes(key)) {
             html += `<div class="monster-card"><h3 style="color: ${data.color};">${data.name}</h3><div class="m-spawn">📍 出現條件：${data.spawnRule}</div>
@@ -1056,9 +1295,12 @@ function renderBestiary() {
 
 window.showRarityDetails = function(rarityName) {
     document.querySelectorAll('.prob-row').forEach(el => el.classList.remove('active')); document.getElementById(`prob_row_${rarityName}`).classList.add('active');
-    const detailsBox = document.getElementById('probDetails'); detailsBox.style.display = 'block'; const rColor = RARITIES[rarityName].color; const items = UPGRADE_POOL.filter(u => u.rarity === rarityName);
+    const detailsBox = document.getElementById('probDetails'); detailsBox.style.display = 'block';
+    const rColor = RARITIES[rarityName].color; const items = UPGRADE_POOL.filter(u => u.rarity === rarityName);
     let html = `<h2 style="color: ${rColor}; margin-top: 0; text-shadow: 0 0 5px ${rColor}; border-bottom: 2px solid ${rColor}; padding-bottom: 8px;">✦ ${rarityName} 升級一覽</h2>`;
-    if (items.length === 0) { html += `<p style="color: #aaa; text-align: center; margin-top: 50px;">此稀有度目前沒有專屬升級項目。</p>`; } else { items.forEach(item => { let typeLabel = ''; if (item.type === 'global') typeLabel = '通用能力'; else if (WEAPONS[item.type]) typeLabel = WEAPONS[item.type].name + ' 專屬'; else typeLabel = item.type; html += `<div class="detail-item" style="border-left-color: ${rColor};"><div class="detail-item-title"><span>${item.name}</span><span class="detail-item-type">${typeLabel}</span></div><div class="detail-item-desc">${item.desc}</div></div>`; }); }
+    if (items.length === 0) { html += `<p style="color: #aaa; text-align: center; margin-top: 50px;">此稀有度目前沒有專屬升級項目。</p>`;
+    } else { items.forEach(item => { let typeLabel = ''; if (item.type === 'global') typeLabel = '通用能力'; else if (WEAPONS[item.type]) typeLabel = WEAPONS[item.type].name + ' 專屬'; else typeLabel = item.type; html += `<div class="detail-item" style="border-left-color: ${rColor};"><div class="detail-item-title"><span>${item.name}</span><span class="detail-item-type">${typeLabel}</span></div><div class="detail-item-desc">${item.desc}</div></div>`; });
+    }
     detailsBox.innerHTML = html;
 };
 
@@ -1085,78 +1327,39 @@ function triggerLevelUp() {
         let btn = document.createElement('button'); btn.className = 'menu-btn upgrade-btn'; let rColor = RARITIES[choice.rarity].color; btn.style.borderColor = rColor;
         if (choice.rarity === '神話' || choice.rarity === '神聖' || choice.rarity === '傳奇') { btn.style.boxShadow = `0 0 15px ${rColor}88`; }
         btn.innerHTML = `<div style="color: ${rColor}; font-size: 14px; font-weight: bold; letter-spacing: 2px;">✦ ${choice.rarity} ✦</div><strong style="color: ${rColor}; text-shadow: 0 0 5px ${rColor};">${choice.name}</strong><span>${choice.desc}</span>`;
-        btn.onclick = () => { choice.action(); if (choice.rarity === '獨家') sessionStats.exclusivePicks++; if (sessionExp >= sessionMaxExp) { sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp(); } else { state = 'PLAYING'; showMenu('playing'); updateUI(); animate(); } };
+        btn.onclick = () => { choice.action(); if (choice.rarity === '獨家') sessionStats.exclusivePicks++; if (sessionExp >= sessionMaxExp) { sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp(); } else { state = 'PLAYING'; showMenu('playing'); updateUI(); animId = requestAnimationFrame(animate); } };
         container.appendChild(btn);
-    });
-}
-
-function getCurrentDPS() {
-    const weapon = WEAPONS[currentWeapon]; 
-    let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0; 
-    let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0; 
-    const wUpg = weaponUpgrades[currentWeapon] || {dmgLvl: 1, frLvl: 1};
-    const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); 
-    const wFrBonus = Math.pow(0.95, wUpg.frLvl - 1);  
-
-    let finalDamage = weapon.damage * globalStats.damageMult * wDmgBonus * sessionStats.damageMult * weaponDmgMult; 
-    if (activeRelics.infiniteBandolier) finalDamage *= 1.3;
-    if (activeRelics.demonPact) finalDamage *= 1.6;
-    if (activeRelics.soulReaper) finalDamage *= (1 + (Math.floor(soulReaperKills / 50) * 0.01));
-
-    let finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * wFrBonus * sessionStats.fireRateMult * weaponFrMult)); 
-    if (activeRelics.glassCannon) finalFireRate = Math.max(1, Math.floor(finalFireRate * 0.7));
-
-    let baseBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal;
-    if (activeRelics.glassCannon) baseBullets += 2;
-    let bulletMult = sessionStats.weaponMods[currentWeapon]?.bulletMult || 1.0;
-    let finalBullets = Math.round(baseBullets * bulletMult);
-
-    return finalDamage * finalBullets * (60 / finalFireRate);
-}
-
-function triggerThorns(dmgReceived) {
-    let thornDmg = (getCurrentDPS() / 5) * dmgReceived;
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, Math.max(canvas.width, canvas.height), 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
-    ctx.fill();
-
-    enemies.forEach(e => {
-        let finalThornDmg = thornDmg;
-        if (activeRelics.giantSlayer && MONSTER_DATA[e.type]?.isBoss) finalThornDmg *= 3;
-        e.hp -= finalThornDmg;
     });
 }
 
 function autoAimShoot(shooterKey, isMe, angle, currentWeap, isShooting) {
     if (!isShooting) return; 
 
-    const weapon = WEAPONS[currentWeap]; 
+    const weapon = WEAPONS[currentWeap];
     let weaponDmgMult = 1.0; let weaponFrMult = 1.0; let weaponSpeedMult = 1.0;
 
-    let finalDamage = weapon.damage * globalStats.damageMult; 
+    let finalDamage = weapon.damage * globalStats.damageMult;
     let finalFireRate = weapon.fireRate; 
     let finalBullets = weapon.bullets; 
     let finalSpread = weapon.spread; 
     let finalSpeed = 10;
-
+    
     if (isMe) {
         weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0; 
-        weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0; 
+        weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0;
         weaponSpeedMult = sessionStats.weaponMods[currentWeapon]?.speedMult || 1.0;
 
         const wUpg = weaponUpgrades[currentWeapon];
-        const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); 
-        const wFrBonus = Math.pow(0.95, wUpg.frLvl - 1);  
+        let star = weaponStars[currentWeapon] || 0;
+        const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1));
+        const wFrBonus = Math.pow(0.95, wUpg.frLvl - 1) * Math.pow(0.95, star);  
+        let starDmgBonus = 1 + star * 0.2;
 
-        finalDamage = weapon.damage * globalStats.damageMult * wDmgBonus * sessionStats.damageMult * weaponDmgMult; 
-        if (activeRelics.infiniteBandolier) {
-            finalDamage *= 1.3;
-            weaponSpeedMult *= 2.0;
-        }
+        finalDamage = weapon.damage * globalStats.damageMult * wDmgBonus * sessionStats.damageMult * weaponDmgMult * starDmgBonus;
+        if (activeRelics.infiniteBandolier) { finalDamage *= 1.3; weaponSpeedMult *= 2.0; }
         if (activeRelics.demonPact) finalDamage *= 1.6;
         if (activeRelics.soulReaper) finalDamage *= (1 + (Math.floor(soulReaperKills / 50) * 0.01));
-
+        
         finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * wFrBonus * sessionStats.fireRateMult * weaponFrMult)); 
         if (activeRelics.glassCannon) finalFireRate = Math.max(1, Math.floor(finalFireRate * 0.7));
         
@@ -1168,8 +1371,7 @@ function autoAimShoot(shooterKey, isMe, angle, currentWeap, isShooting) {
         
         let currentSpread = weapon.spread;
         if (currentSpread === 0 && finalBullets > 1) currentSpread = 0.15; 
-        finalSpread = Math.max(0, currentSpread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0)); 
-        
+        finalSpread = Math.max(0, currentSpread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0));
         finalSpeed = 10 * sessionStats.bulletSpeedMult * weaponSpeedMult;
     }
 
@@ -1177,19 +1379,19 @@ function autoAimShoot(shooterKey, isMe, angle, currentWeap, isShooting) {
     if(!stateRef) return;
 
     const fireMode = weapon.fireMode || 'stream';
-
     if (fireMode === 'stream') {
         const averageInterval = Math.max(1, Math.floor(finalFireRate / finalBullets));
         if (frames >= stateRef.nextShotFrame) {
             const randomScatterAngle = angle + (Math.random() - 0.5) * finalSpread;
-            bullets.push({ x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, originDmg: finalDamage, velocity: { x: Math.cos(randomScatterAngle) * finalSpeed, y: Math.sin(randomScatterAngle) * finalSpeed } }); 
+            bullets.push({ x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, originDmg: finalDamage, velocity: { x: Math.cos(randomScatterAngle) * finalSpeed, y: Math.sin(randomScatterAngle) * finalSpeed } });
             stateRef.nextShotFrame = frames + averageInterval;
         }
     } else {
         if (frames - stateRef.lastShotFrame >= finalFireRate) {
             for (let i = 0; i < finalBullets; i++) { 
-                let fireAngle = angle; if (finalSpread > 0) fireAngle += (Math.random() - 0.5) * finalSpread; 
-                bullets.push({ x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, originDmg: finalDamage, velocity: { x: Math.cos(fireAngle) * finalSpeed, y: Math.sin(fireAngle) * finalSpeed } }); 
+                let fireAngle = angle;
+                if (finalSpread > 0) fireAngle += (Math.random() - 0.5) * finalSpread;
+                bullets.push({ x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, originDmg: finalDamage, velocity: { x: Math.cos(fireAngle) * finalSpeed, y: Math.sin(fireAngle) * finalSpeed } });
             }
             stateRef.lastShotFrame = frames;
         }
@@ -1200,10 +1402,9 @@ function autoAimShoot(shooterKey, isMe, angle, currentWeap, isShooting) {
 function spawnSpecificEnemy(type) {
     const data = MONSTER_DATA[type];
     let x, y; let radius = data.radius || 20;
-    
     if (Math.random() < 0.5) { x = Math.random() < 0.5 ? -radius - 50 : canvas.width + radius + 50; y = Math.random() * canvas.height; } else { x = Math.random() * canvas.width; y = Math.random() < 0.5 ? -radius - 50 : canvas.height + radius + 50; }
     
-    const angle = Math.atan2(player.y - y, player.x - x); 
+    const angle = Math.atan2(player.y - y, player.x - x);
     let diffScaling = (1 + (selectedDifficulty - 1) * 0.3);
     let baseHp = data.baseHpMulti * (1 + currentWave * 0.4) * diffScaling; 
     
@@ -1212,31 +1413,26 @@ function spawnSpecificEnemy(type) {
 
     let frostRes = 0;
     let kills = sessionBossKills[type] || 0;
-    if (type === 'mini') { 
-        frostRes = 0.01 * selectedDifficulty * (kills / 2); 
-        frostRes = Math.min(0.60, Math.max(0, frostRes)); 
-    } else if (type === 'big') { 
-        frostRes = 0.01 * selectedDifficulty * kills * 3; 
-    } else if (type === 'final_boss') { 
-        frostRes = 0.99 * kills * selectedDifficulty; 
-    }
+    if (type === 'mini') { frostRes = 0.01 * selectedDifficulty * (kills / 2); frostRes = Math.min(0.60, Math.max(0, frostRes)); 
+    } else if (type === 'big') { frostRes = 0.01 * selectedDifficulty * kills * 3;
+    } else if (type === 'final_boss') { frostRes = 0.99 * kills * selectedDifficulty; }
 
     let customGold, customExp;
     if (data.isBoss || type === 'big' || type === 'mini') {
         let hpRatio = baseHp / data.baseHpMulti;
         customGold = Math.max(1, Math.floor(data.baseGold * hpRatio * selectedDifficulty * (1.15 / 3)));
-        customExp = Math.max(1, Math.floor(data.baseExp * hpRatio * selectedDifficulty * 0.575)); 
+        customExp = Math.max(1, Math.floor(data.baseExp * hpRatio * selectedDifficulty * 0.575));
     } else {
         let hpDiff = Math.max(0.1, baseHp - data.baseHpMulti);
         customGold = Math.max(1, Math.floor(data.baseGold * hpDiff * selectedDifficulty * 0.75)); 
-        customExp = Math.max(1, Math.floor(data.baseExp * hpDiff * selectedDifficulty * 1.5)); 
+        customExp = Math.max(1, Math.floor(data.baseExp * hpDiff * selectedDifficulty * 1.5));
     }
 
     let eDamage = data.baseDamage;
     if (data.isBoss) { eDamage = eDamage * Math.max(1, kills) * selectedDifficulty; } 
     else { eDamage = eDamage * selectedDifficulty; }
     
-    enemies.push({ x, y, radius, color: data.color, hp: baseHp, maxHp: baseHp, goldValue: customGold, expValue: customExp, type, damage: eDamage, velocity: { x: Math.cos(angle) * data.speed, y: Math.sin(angle) * data.speed }, slowStacks: 0, frostRes: frostRes, skillTriggered: false, bulletTimer: 0, teleportTimer: 0, laserTimer: 0, shootTimer: 0 });
+    enemies.push({ x, y, radius, color: data.color, hp: baseHp, maxHp: baseHp, goldValue: customGold, expValue: customExp, type, damage: eDamage, velocity: { x: Math.cos(angle) * data.speed, y: Math.sin(angle) * data.speed }, slowStacks: 0, frostRes: frostRes, skillTriggered: false, bulletTimer: 0, teleportTimer: 0, laserTimer: 0, shootTimer: 0, frozenTimer: 0 });
 }
 
 function isShieldBlocking(target, shieldAngle) {
@@ -1248,18 +1444,14 @@ function isShieldBlocking(target, shieldAngle) {
 }
 
 function animate() {
-    if (state !== 'PLAYING') return; requestAnimationFrame(animate);
+    if (state !== 'PLAYING') return; 
+    animId = requestAnimationFrame(animate);
     ctx.fillStyle = 'rgba(26, 26, 26, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
 
-    // ★ 玩家自動回血邏輯 (結合 ok 繃)
     let tickRegen = 0.05 / 60;
-    if ((sessionStats.okBandAidLvl || 0) > 1) {
-        tickRegen += ((sessionStats.okBandAidLvl - 1) * 0.05) / 60;
-    }
+    if ((sessionStats.okBandAidLvl || 0) > 1) { tickRegen += ((sessionStats.okBandAidLvl - 1) * 0.05) / 60; }
     if (hp < maxHp) {
-        if ((sessionStats.okBandAidLvl || 0) > 0) {
-            hp = Math.min(maxHp, hp + tickRegen);
-        } else {
+        if ((sessionStats.okBandAidLvl || 0) > 0) { hp = Math.min(maxHp, hp + tickRegen); } else {
             let nextInt = Math.ceil(hp - 0.000001);
             if (hp < nextInt) { hp = Math.min(nextInt, hp + tickRegen); }
         }
@@ -1270,27 +1462,41 @@ function animate() {
     if (!unlockedOffhands.includes('shield2')) { tempUp = 'ArrowUp'; tempDown = 'ArrowDown'; tempLeft = 'ArrowLeft'; tempRight = 'ArrowRight'; }
     tempShieldAngle = getAngleFromKeys(keys['w']||keys[tempUp]?'w':'w', keys['s']||keys[tempDown]?'s':'s', keys['a']||keys[tempLeft]?'a':'a', keys['d']||keys[tempRight]?'d':'d', tempShieldAngle);
     shopShieldAngle = getAngleFromKeys('ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', shopShieldAngle);
-
     if(shield2SyncActive) { shield2SyncTimer--; if(shield2SyncTimer <= 0) shield2SyncActive = false; }
 
-    const myAimAngle = Math.atan2(mouseY - player.y, mouseX - player.x); 
+    if(shieldSkillCooldownTimer > 0) {
+        shieldSkillCooldownTimer--;
+        if (frames % 60 === 0) updateUI();
+    }
+
+    const myAimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
     let isMainActive = (activeSlot === 'main');
     
     autoAimShoot(userKey, true, myAimAngle, currentWeapon, isMainActive);
+    // 輻射光環 (無須開火)
+    if (activeRelics.radiantAura) {
+        let diff = selectedDifficulty;
+        sessionStats.radiantAuraTimer = (sessionStats.radiantAuraTimer || 0) + 1;
+        let triggerFrames = 60 * diff;
+        if (sessionStats.radiantAuraTimer >= triggerFrames) {
+            sessionStats.radiantAuraTimer = 0;
+            let auraRadius = 300 / diff;
+            let auraDmg = getCurrentDPS() / 20 / diff;
+            
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, auraRadius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.05)'; ctx.fill(); 
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.2)';
+            ctx.lineWidth = 2; ctx.stroke();
 
-    // 輻射光環 (每 60 幀)
-    if (activeRelics.radiantAura && frames % 60 === 0) {
-        let auraDmg = getCurrentDPS() / 10;
-        ctx.beginPath(); ctx.arc(player.x, player.y, 300, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.05)'; ctx.fill(); ctx.strokeStyle = 'rgba(255, 255, 0, 0.2)'; ctx.lineWidth = 2; ctx.stroke();
-
-        enemies.forEach(e => {
-            if (Math.hypot(e.x - player.x, e.y - player.y) <= 300 + e.radius) {
-                let finalAuraDmg = auraDmg;
-                if (activeRelics.giantSlayer && MONSTER_DATA[e.type]?.isBoss) finalAuraDmg *= 3;
-                e.hp -= finalAuraDmg;
-            }
-        });
+            enemies.forEach(e => {
+                if (Math.hypot(e.x - player.x, e.y - player.y) <= auraRadius + e.radius) {
+                    let finalAuraDmg = auraDmg;
+                    if (activeRelics.giantSlayer && MONSTER_DATA[e.type]?.isBoss) finalAuraDmg *= 3;
+                    e.hp -= finalAuraDmg;
+                }
+            });
+        }
     }
 
     if (isMultiplayer) {
@@ -1298,44 +1504,66 @@ function animate() {
             if (k === userKey) return; let pData = roomPlayers[k]; if(!pData) return;
             autoAimShoot(k, false, pData.angle, pData.weapon, pData.isShooting);
             ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(player.x + Math.cos(pData.angle) * 40, player.y + Math.sin(pData.angle) * 40); ctx.strokeStyle = "rgba(255, 100, 100, 0.5)"; ctx.lineWidth = 2; ctx.stroke(); 
-        });
+         });
     }
 
-    if (isMainActive) { ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(player.x + Math.cos(myAimAngle) * 40, player.y + Math.sin(myAimAngle) * 40); ctx.strokeStyle = "rgba(255, 255, 255, 0.2)"; ctx.lineWidth = 2; ctx.stroke(); }
+    if (isMainActive) { ctx.beginPath(); ctx.moveTo(player.x, player.y);
+        ctx.lineTo(player.x + Math.cos(myAimAngle) * 40, player.y + Math.sin(myAimAngle) * 40); ctx.strokeStyle = "rgba(255, 255, 255, 0.2)"; ctx.lineWidth = 2; ctx.stroke();
+    }
     ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2); ctx.fillStyle = player.color; ctx.fill();
-
     let s1Active = (activeSlot === 'offhand' && currentOffhand === 'shield');
     let s2Active = unlockedOffhands.includes('shield2') && (!isMainActive || shield2SyncActive);
     let tempActive = playerHasTempShield;
 
-    if (s1Active) { ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 15, myAimAngle - Math.PI/2.5, myAimAngle + Math.PI/2.5); ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0, 210, 255, 0.8)'; ctx.lineCap = 'round'; ctx.stroke(); }
-    if (s2Active) { ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 22, shopShieldAngle - Math.PI/2.5, shopShieldAngle + Math.PI/2.5); ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255, 235, 59, 0.8)'; ctx.lineCap = 'round'; ctx.stroke(); }
-    if (tempActive) { ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 29, tempShieldAngle - Math.PI/2.5, tempShieldAngle + Math.PI/2.5); ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255, 0, 255, 0.8)'; ctx.lineCap = 'round'; ctx.stroke(); }
+    if (s1Active) { ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 15, myAimAngle - Math.PI/2.5, myAimAngle + Math.PI/2.5);
+        ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0, 210, 255, 0.8)'; ctx.lineCap = 'round'; ctx.stroke();
+    }
+    if (s2Active) { ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 22, shopShieldAngle - Math.PI/2.5, shopShieldAngle + Math.PI/2.5);
+        ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255, 235, 59, 0.8)'; ctx.lineCap = 'round'; ctx.stroke();
+    }
+    if (tempActive) { ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 29, tempShieldAngle - Math.PI/2.5, tempShieldAngle + Math.PI/2.5);
+        ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255, 0, 255, 0.8)'; ctx.lineCap = 'round'; ctx.stroke();
+    }
 
     for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
-        let bullet = bullets[bIndex]; let nearestEnemy = null; let minDist = 150; 
+        let bullet = bullets[bIndex];
+        let nearestEnemy = null; let minDist = 150; 
         enemies.forEach(enemy => { let dist = Math.hypot(enemy.x - bullet.x, enemy.y - bullet.y); if (dist < minDist) { minDist = dist; nearestEnemy = enemy; } });
         if (nearestEnemy) {
-            const targetAngle = Math.atan2(nearestEnemy.y - bullet.y, nearestEnemy.x - bullet.x); const currentAngle = Math.atan2(bullet.velocity.y, bullet.velocity.x); let angleDiff = targetAngle - currentAngle; while (angleDiff > Math.PI) angleDiff -= Math.PI * 2; while (angleDiff < -Math.PI) angleDiff += Math.PI * 2; const turnSpeed = 0.015; const newAngle = currentAngle + Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnSpeed); const speed = Math.hypot(bullet.velocity.x, bullet.velocity.y); bullet.velocity.x = Math.cos(newAngle) * speed; bullet.velocity.y = Math.sin(newAngle) * speed;
+            const targetAngle = Math.atan2(nearestEnemy.y - bullet.y, nearestEnemy.x - bullet.x);
+            const currentAngle = Math.atan2(bullet.velocity.y, bullet.velocity.x); let angleDiff = targetAngle - currentAngle; while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2; const turnSpeed = 0.015;
+            const newAngle = currentAngle + Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnSpeed); const speed = Math.hypot(bullet.velocity.x, bullet.velocity.y); bullet.velocity.x = Math.cos(newAngle) * speed;
+            bullet.velocity.y = Math.sin(newAngle) * speed;
         }
         bullet.x += bullet.velocity.x; bullet.y += bullet.velocity.y;
-        ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); ctx.fillStyle = bullet.color; ctx.fill();
+        ctx.beginPath();
+        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); ctx.fillStyle = bullet.color; ctx.fill();
         if (bullet.x < -100 || bullet.x > canvas.width + 100 || bullet.y < -100 || bullet.y > canvas.height + 100) bullets.splice(bIndex, 1);
     }
 
-    let shouldCheckLevelUp = false; let activeBoss = null; let triggeredRelicThisFrame = false;
-    
+    let shouldCheckLevelUp = false;
+    let activeBoss = null;
+    let triggeredRelicThisFrame = false;
     for (let eIndex = enemies.length - 1; eIndex >= 0; eIndex--) {
-        let enemy = enemies[eIndex]; 
-        
-        // 敵人被擊殺邏輯
+        let enemy = enemies[eIndex];
         if (enemy.hp <= 0) {
-            if (!defeatedMonsters.includes(enemy.type)) defeatedMonsters.push(enemy.type); 
-            if (MONSTER_DATA[enemy.type]?.isBoss) {
-                sessionBossKills[enemy.type] = (sessionBossKills[enemy.type] || 0) + 1;
+            if (!defeatedMonsters.includes(enemy.type)) defeatedMonsters.push(enemy.type);
+            
+            // --- 抽獎與遺物邏輯 ---
+            if (selectedDifficulty >= 2) {
+                if (!killCounters[selectedDifficulty]) killCounters[selectedDifficulty] = { normal: 0, boss: 0, endlessBoss: 0 };
+                let kc = killCounters[selectedDifficulty];
                 
-                // 遺物觸發條件 (難度 >= 2)
-                if (selectedDifficulty >= 2) {
+                if (MONSTER_DATA[enemy.type]?.isBoss) {
+                    if (isEndless) {
+                        kc.endlessBoss = (kc.endlessBoss || 0) + 1;
+                        if (kc.endlessBoss >= 10) { kc.endlessBoss -= 10; gachaPoints += selectedDifficulty; }
+                    } else {
+                        gachaPoints += selectedDifficulty; // 非無盡1隻Boss=獲得點數
+                    }
+                    
+                    sessionBossKills[enemy.type] = (sessionBossKills[enemy.type] || 0) + 1;
                     bossKillsForRelic++;
                     let requiredKills = (currentWave <= 30) ? 1 : 5;
                     if (bossKillsForRelic >= requiredKills && !triggeredRelicThisFrame) {
@@ -1343,135 +1571,165 @@ function animate() {
                         triggeredRelicThisFrame = true;
                         showRelicUI();
                     }
+                } else {
+                    kc.normal = (kc.normal || 0) + 1;
+                    if (kc.normal >= 100) { kc.normal -= 100; gachaPoints += selectedDifficulty; }
                 }
             }
+
             if (enemy.type === 'final_boss') hasDefeatedFinalBoss = true;
-            
             enemies.splice(eIndex, 1); 
             
             let goldMult = activeRelics.greedSkull ? 2.5 : 1.0;
             let expMult = activeRelics.greedSkull ? 1.5 : 1.0;
-
             let finalGold = Math.floor(enemy.goldValue * sessionStats.goldBonus * goldMult); 
             gold += finalGold; sessionGold += finalGold; 
-            sessionExp += Math.floor(enemy.expValue * expMult); 
-
-            // 靈魂收割鐮擊殺累計
+            sessionExp += Math.floor(enemy.expValue * expMult);
             if (activeRelics.soulReaper) {
                 soulReaperKills++;
                 if (soulReaperKills % 50 === 0) { maxHp += 0.5; hp += 0.5; }
             }
-            // 惡魔契約回血
             if (activeRelics.demonPact && Math.random() < 0.1) { hp = Math.min(hp + 0.1, maxHp); }
 
             shouldCheckLevelUp = true; updateUI(); 
-            continue; 
+            continue;
         }
 
-        let actualSlow = (enemy.slowStacks * 0.01) * (1 - enemy.frostRes);
-        let minSpeedMult = activeRelics.absoluteZero ? 0.0 : 0.1;
-        let frostSlowMult = Math.max(minSpeedMult, 1 - actualSlow); 
-        let relicEnemySpeedMult = activeRelics.absoluteZero ? 0.7 : 1.0;
-        
-        enemy.x += enemy.velocity.x * sessionStats.enemySpeedMult * frostSlowMult * relicEnemySpeedMult; 
-        enemy.y += enemy.velocity.y * sessionStats.enemySpeedMult * frostSlowMult * relicEnemySpeedMult;
-
-        if (MONSTER_DATA[enemy.type]?.isBoss) {
-            if (!activeBoss || enemy.hp > activeBoss.hp) activeBoss = enemy;
-        }
-
-        let isBossType = MONSTER_DATA[enemy.type]?.isBoss;
-        if (isBossType && selectedDifficulty >= 2 && enemy.hp <= enemy.maxHp / 2 && !enemy.skillTriggered) {
-            enemy.skillTriggered = true;
-            let diffFactor = (selectedDifficulty - 1) * (selectedDifficulty / 2);
-            if (enemy.type === 'mini') {
-                let spawnC = Math.max(1, Math.floor(diffFactor));
-                for(let i=0; i<spawnC; i++) spawnSpecificEnemy('normal');
-            } else if (enemy.type === 'big') {
-                enemy.hp += enemy.maxHp * (0.01 * diffFactor);
-                enemy.laserTimer = 0;
-            } else if (enemy.type === 'final_boss') {
-                playerHasTempShield = true; enemy.bulletTimer = 0; enemy.teleportTimer = 0;
+        if (enemy.frozenTimer > 0) {
+            enemy.frozenTimer--;
+            ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fillStyle = enemy.color; ctx.fill();
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, enemy.radius + 3, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0, 255, 255, 0.5)'; ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.font = (enemy.type === 'normal' ? 'bold 12px Arial' : 'bold 16px Arial'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(Math.max(0, enemy.hp).toFixed(1), enemy.x, enemy.y);
+            
+            let eName = enemy.type === 'normal' || enemy.type === 'ranged' ? '' : MONSTER_DATA[enemy.type].name;
+            if (MONSTER_DATA[enemy.type]?.isBoss && selectedDifficulty === 1) eName += '(偽)';
+            if (!MONSTER_DATA[enemy.type]?.isBoss || !settingShowBossUI) {
+                ctx.font = 'bold 14px Arial';
+                if (eName !== '') ctx.fillText(eName, enemy.x, enemy.y - enemy.radius - 12);
             }
-        }
+        } else {
+            let actualSlow = (enemy.slowStacks * 0.01) * (1 - enemy.frostRes);
+            let minSpeedMult = activeRelics.absoluteZero ? 0.0 : 0.1;
+            let frostSlowMult = Math.max(minSpeedMult, 1 - actualSlow); 
+            let relicEnemySpeedMult = activeRelics.absoluteZero ? 0.7 : 1.0;
+            
+            enemy.x += enemy.velocity.x * sessionStats.enemySpeedMult * frostSlowMult * relicEnemySpeedMult;
+            enemy.y += enemy.velocity.y * sessionStats.enemySpeedMult * frostSlowMult * relicEnemySpeedMult;
 
-        if (enemy.skillTriggered) {
-            let diffFactor = (selectedDifficulty - 1) * (selectedDifficulty / 2);
-            if (enemy.type === 'big') {
-                enemy.laserTimer++;
-                if (enemy.laserTimer >= 240 && enemy.laserTimer < 300) {
-                    if (enemy.laserTimer % 20 < 10) { ctx.fillStyle = '#ff0000'; ctx.font = 'bold 40px Arial'; ctx.fillText('!', enemy.x, enemy.y - enemy.radius - 30); }
-                }
-                if (enemy.laserTimer >= 300) {
-                    let pAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-                    let laserDmg = getCurrentDPS() * diffFactor / (WEAPONS[currentWeapon].bullets * (60 / Math.max(1, Math.floor(WEAPONS[currentWeapon].fireRate * globalStats.fireRateMult))));
-                    enemyBullets.push({ x: enemy.x, y: enemy.y, radius: 15, color: '#ff0000', velocity: { x: Math.cos(pAngle)*15, y: Math.sin(pAngle)*15 }, damage: laserDmg, isLaser: true });
+            if (MONSTER_DATA[enemy.type]?.isBoss) {
+                if (!activeBoss || enemy.hp > activeBoss.hp) activeBoss = enemy;
+            }
+
+            let isBossType = MONSTER_DATA[enemy.type]?.isBoss;
+            if (isBossType && selectedDifficulty >= 2 && enemy.hp <= enemy.maxHp / 2 && !enemy.skillTriggered) {
+                enemy.skillTriggered = true;
+                let diffFactor = (selectedDifficulty - 1) * (selectedDifficulty / 2);
+                if (enemy.type === 'mini') {
+                    let spawnC = Math.max(1, Math.floor(diffFactor));
+                    for(let i=0; i<spawnC; i++) spawnSpecificEnemy('normal');
+                } else if (enemy.type === 'big') {
+                    enemy.hp += enemy.maxHp * (0.01 * diffFactor);
                     enemy.laserTimer = 0;
+                } else if (enemy.type === 'final_boss') {
+                    playerHasTempShield = true;
+                    enemy.bulletTimer = 0; enemy.teleportTimer = 0;
                 }
-            } else if (enemy.type === 'final_boss') {
-                enemy.bulletTimer++;
-                if (enemy.bulletTimer >= 60) {
-                    let bCount = Math.max(1, Math.floor(diffFactor));
-                    let bDmg = Math.max(1, enemy.damage - MONSTER_DATA.final_boss.baseDamage);
-                    for(let i=0; i<bCount; i++) {
-                        let ex = Math.random() < 0.5 ? (Math.random() < 0.5 ? -10 : canvas.width + 10) : Math.random() * canvas.width;
-                        let ey = (ex <= 0 || ex >= canvas.width) ? Math.random() * canvas.height : (Math.random() < 0.5 ? -10 : canvas.height + 10);
-                        let ang = Math.atan2(player.y - ey, player.x - ex);
-                        enemyBullets.push({ x: ex, y: ey, radius: 8, color: '#000000', velocity: { x: Math.cos(ang)*5, y: Math.sin(ang)*5 }, damage: bDmg });
+            }
+
+            if (enemy.skillTriggered) {
+                let diffFactor = (selectedDifficulty - 1) * (selectedDifficulty / 2);
+                if (enemy.type === 'big') {
+                    enemy.laserTimer++;
+                    if (enemy.laserTimer >= 240 && enemy.laserTimer < 300) {
+                        if (enemy.laserTimer % 20 < 10) { ctx.fillStyle = '#ff0000';
+                            ctx.font = 'bold 40px Arial'; ctx.fillText('!', enemy.x, enemy.y - enemy.radius - 30);
+                        }
                     }
-                    enemy.bulletTimer = 0;
-                }
-                enemy.teleportTimer++;
-                if (enemy.teleportTimer >= 600) {
-                    let dist = Math.hypot(player.x - enemy.x, player.y - enemy.y); let rAng = Math.random() * Math.PI * 2;
-                    enemy.x = player.x + Math.cos(rAng) * dist; enemy.y = player.y + Math.sin(rAng) * dist; enemy.teleportTimer = 0;
+                    if (enemy.laserTimer >= 300) {
+                        let pAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                        let wDmgMult = sessionStats.weaponMods?.[currentWeapon]?.dmgMult || 1.0;
+                        let wUpg = weaponUpgrades[currentWeapon] || {dmgLvl: 1};
+                        let star = weaponStars[currentWeapon] || 0;
+                        let wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1));
+                        let starDmgBonus = 1 + star * 0.2;
+                        const currentDmg = WEAPONS[currentWeapon].damage * globalStats.damageMult * wDmgBonus * (sessionStats.damageMult || 1) * wDmgMult * starDmgBonus;
+                        
+                        let laserDmg = currentDmg * diffFactor;
+                        enemyBullets.push({ x: enemy.x, y: enemy.y, radius: 15, color: '#ff0000', velocity: { x: Math.cos(pAngle)*15, y: Math.sin(pAngle)*15 }, damage: laserDmg, isLaser: true });
+                        enemy.laserTimer = 0;
+                    }
+                } else if (enemy.type === 'final_boss') {
+                    enemy.bulletTimer++;
+                    if (enemy.bulletTimer >= 60) {
+                        let bCount = Math.max(1, Math.floor(diffFactor));
+                        let bDmg = Math.max(1, enemy.damage - MONSTER_DATA.final_boss.baseDamage);
+                        for(let i=0; i<bCount; i++) {
+                            let ex = Math.random() < 0.5 ? (Math.random() < 0.5 ? -10 : canvas.width + 10) : Math.random() * canvas.width;
+                            let ey = (ex <= 0 || ex >= canvas.width) ? Math.random() * canvas.height : (Math.random() < 0.5 ? -10 : canvas.height + 10);
+                            let ang = Math.atan2(player.y - ey, player.x - ex);
+                            enemyBullets.push({ x: ex, y: ey, radius: 8, color: '#000000', velocity: { x: Math.cos(ang)*5, y: Math.sin(ang)*5 }, damage: bDmg });
+                        }
+                        enemy.bulletTimer = 0;
+                    }
+                    enemy.teleportTimer++;
+                    if (enemy.teleportTimer >= 600) {
+                        let dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+                        let rAng = Math.random() * Math.PI * 2;
+                        enemy.x = player.x + Math.cos(rAng) * dist;
+                        enemy.y = player.y + Math.sin(rAng) * dist;
+                        enemy.teleportTimer = 0;
+                    }
                 }
             }
-        }
-        
-        if (enemy.type === 'ranged') {
-            enemy.shootTimer += 1;
-            if (enemy.shootTimer >= 180) { 
-                enemy.shootTimer = 0;
-                let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-                enemyBullets.push({ x: enemy.x, y: enemy.y, radius: 8, color: '#4caf50', velocity: { x: Math.cos(angle)*3, y: Math.sin(angle)*3 }, damage: enemy.damage });
+            
+            if (enemy.type === 'ranged') {
+                enemy.shootTimer += 1;
+                if (enemy.shootTimer >= 180) { 
+                    enemy.shootTimer = 0;
+                    let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                    enemyBullets.push({ x: enemy.x, y: enemy.y, radius: 8, color: '#4caf50', velocity: { x: Math.cos(angle)*3, y: Math.sin(angle)*3 }, damage: enemy.damage });
+                }
             }
-        }
 
-        ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fillStyle = enemy.color; ctx.fill();
-        if (enemy.slowStacks > 0) { ctx.strokeStyle = 'rgba(0, 210, 255, 0.7)'; ctx.lineWidth = 2 + (enemy.slowStacks / 8); ctx.stroke(); }
-        
-        ctx.fillStyle = 'white'; ctx.font = (enemy.type === 'normal' ? 'bold 12px Arial' : 'bold 16px Arial'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
-        ctx.fillText(Math.max(0, enemy.hp).toFixed(1), enemy.x, enemy.y);
-        
-        let eName = enemy.type === 'normal' || enemy.type === 'ranged' ? '' : MONSTER_DATA[enemy.type].name;
-        if (isBossType && selectedDifficulty === 1) eName += '(偽)';
-        if (!isBossType || !settingShowBossUI) {
-            ctx.font = 'bold 14px Arial';
-            if (eName !== '') ctx.fillText(eName, enemy.x, enemy.y - enemy.radius - 12);
-        }
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fillStyle = enemy.color; ctx.fill();
+            if (enemy.slowStacks > 0) { ctx.strokeStyle = 'rgba(0, 210, 255, 0.7)'; ctx.lineWidth = 2 + (enemy.slowStacks / 8); ctx.stroke();
+            }
+            
+            ctx.fillStyle = 'white';
+            ctx.font = (enemy.type === 'normal' ? 'bold 12px Arial' : 'bold 16px Arial'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(Math.max(0, enemy.hp).toFixed(1), enemy.x, enemy.y);
+            
+            let eName = enemy.type === 'normal' || enemy.type === 'ranged' ? '' : MONSTER_DATA[enemy.type].name;
+            if (isBossType && selectedDifficulty === 1) eName += '(偽)';
+            if (!isBossType || !settingShowBossUI) {
+                ctx.font = 'bold 14px Arial';
+                if (eName !== '') ctx.fillText(eName, enemy.x, enemy.y - enemy.radius - 12);
+            }
 
-        const distToPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-        if (distToPlayer - enemy.radius - player.radius < 1) {
-            let dmgToPlayer = enemy.damage;
-            if (s1Active && isShieldBlocking(enemy, myAimAngle)) dmgToPlayer *= 0.5;
-            if (s2Active && isShieldBlocking(enemy, shopShieldAngle)) dmgToPlayer *= 0.5;
-            if (tempActive && isShieldBlocking(enemy, tempShieldAngle)) dmgToPlayer *= 0.5;
+            const distToPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+            if (distToPlayer - enemy.radius - player.radius < 1) {
+                let dmgToPlayer = enemy.damage;
+                if (s1Active && isShieldBlocking(enemy, myAimAngle)) dmgToPlayer *= 0.5;
+                if (s2Active && isShieldBlocking(enemy, shopShieldAngle)) dmgToPlayer *= 0.5;
+                if (tempActive && isShieldBlocking(enemy, tempShieldAngle)) dmgToPlayer *= 0.5;
 
-            enemy.hp = 0; hp -= dmgToPlayer; updateUI();
-            if (activeRelics.thorns && dmgToPlayer > 0) triggerThorns(dmgToPlayer);
-
-            if (hp <= 0) { state = 'GAMEOVER'; document.getElementById('bossUI').style.display = 'none'; document.getElementById('failWaveDisplay').innerText = currentWave; document.getElementById('sessionGold').innerText = sessionGold; if(isMultiplayer) leaveRoom(false); saveGameData(); showMenu('over'); }
-        }
+                hp -= dmgToPlayer; updateUI();
+                if (activeRelics.thorns && dmgToPlayer > 0) triggerThorns(dmgToPlayer);
+                if (hp <= 0) { state = 'GAMEOVER'; document.getElementById('bossUI').style.display = 'none'; document.getElementById('failWaveDisplay').innerText = currentWave; document.getElementById('sessionGold').innerText = sessionGold; if(isMultiplayer) leaveRoom(false); saveGameData(); showMenu('over'); }
+            }
+        } // end if-else frozenTimer
 
         for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
-            let bullet = bullets[bIndex]; const distToBullet = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
+            let bullet = bullets[bIndex];
+            const distToBullet = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
             if (distToBullet - enemy.radius - bullet.radius < 1) {
                 let hitDmg = bullet.damage;
-                if (activeRelics.giantSlayer && isBossType) hitDmg *= 3;
-                enemy.hp -= hitDmg; 
-                
-                // ★ 藝術就是爆炸 範圍傷害
+                if (activeRelics.giantSlayer && MONSTER_DATA[enemy.type]?.isBoss) hitDmg *= 3;
+                enemy.hp -= hitDmg;
                 if ((sessionStats.explosionLvl || 0) > 0) {
                     let blastRadius = 300 * sessionStats.explosionLvl;
                     let blastDamage = bullet.originDmg * sessionStats.explosionLvl / 5;
@@ -1486,11 +1744,11 @@ function animate() {
                     });
                 }
                 
-                bullets.splice(bIndex, 1); 
+                bullets.splice(bIndex, 1);
                 if (sessionStats.frostMagazineLevel > 0) { 
                     let maxStacks = 30 + (sessionStats.frostMagazineLevel * 10);
                     if (activeRelics.absoluteZero) maxStacks = 100;
-                    enemy.slowStacks = Math.min(enemy.slowStacks + sessionStats.frostMagazineLevel, maxStacks); 
+                    enemy.slowStacks = Math.min(enemy.slowStacks + sessionStats.frostMagazineLevel, maxStacks);
                 }
             }
         }
@@ -1508,14 +1766,14 @@ function animate() {
     }
 
     for (let i = enemyBullets.length - 1; i >= 0; i--) {
-        let eb = enemyBullets[i]; 
+        let eb = enemyBullets[i];
         let ebSpeedMult = activeRelics.timeWarp ? 0.5 : 1.0;
         eb.x += eb.velocity.x * ebSpeedMult; 
         eb.y += eb.velocity.y * ebSpeedMult;
         
-        ctx.beginPath(); ctx.arc(eb.x, eb.y, eb.radius, 0, Math.PI * 2);
-        ctx.fillStyle = eb.color; ctx.shadowBlur = 10; ctx.shadowColor = eb.color; ctx.fill(); ctx.shadowBlur = 0; 
-        
+        ctx.beginPath();
+        ctx.arc(eb.x, eb.y, eb.radius, 0, Math.PI * 2);
+        ctx.fillStyle = eb.color; ctx.shadowBlur = 10; ctx.shadowColor = eb.color; ctx.fill(); ctx.shadowBlur = 0;
         if (eb.x < -200 || eb.x > canvas.width + 200 || eb.y < -200 || eb.y > canvas.height + 200) { enemyBullets.splice(i, 1); continue; }
 
         let dist = Math.hypot(player.x - eb.x, player.y - eb.y);
@@ -1552,7 +1810,6 @@ window.addEventListener('resize', () => {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight; player.x = canvas.width / 2; player.y = canvas.height / 2;
     enemies.forEach(enemy => { const newAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x); const speed = Math.hypot(enemy.velocity.x, enemy.velocity.y); enemy.velocity.x = Math.cos(newAngle) * speed; enemy.velocity.y = Math.sin(newAngle) * speed; });
 });
-
 checkLogin();
 if (currentUser) { loadGameData(); }
 
