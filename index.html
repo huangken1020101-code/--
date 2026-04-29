@@ -477,9 +477,9 @@ if(isMobile) document.getElementById('mobileControls').style.display = 'block';
 // ====== 抽獎與升星系統變數 ======
 let gachaPoints = 0;
 let totalDraws = 0;
-let killCounters = {}; // e.g., { '2': { normal: 0, boss: 0, endlessBoss: 0 } }
-let weaponFragments = {}; // e.g., { pistol: 0 }
-let weaponStars = {}; // e.g., { pistol: 0 }
+let killCounters = {}; 
+let weaponFragments = {}; 
+let weaponStars = {}; 
 let shieldLvl = 1;
 let shieldSkillCooldownTimer = 0;
 
@@ -487,7 +487,7 @@ let shieldSkillCooldownTimer = 0;
 let bossKillsForRelic = 0;
 let activeRelics = { demonPact: false, glassCannon: false, greedSkull: false, absoluteZero: false, thorns: false, giantSlayer: false, radiantAura: false, timeWarp: false, infiniteBandolier: false, soulReaper: false };
 let soulReaperKills = 0;
-let relicPending = false; // 防止在遺物彈出前過關
+let relicPending = false; 
 
 const RELIC_DATA = [
     { id: 'demonPact', name: "惡魔契約", cost: () => 24, desc: () => "最終傷害 +60%，擊殺敵人有10%機率回復 0.1 血量。" },
@@ -503,6 +503,11 @@ const RELIC_DATA = [
 ];
 
 let animId;
+// 核心迴圈啟動器，防止重複堆疊 requestAnimationFrame
+function startGameLoop() {
+    if (animId) cancelAnimationFrame(animId);
+    animId = requestAnimationFrame(animate);
+}
 
 window.addEventListener('keydown', e => { 
     if(keys.hasOwnProperty(e.key)) keys[e.key] = true; 
@@ -518,7 +523,7 @@ window.addEventListener('contextmenu', e => { if (state === 'PLAYING') e.prevent
 window.addEventListener('wheel', e => {
     if (state === 'PLAYING') {
         gameZoom += e.deltaY * -0.001;
-        gameZoom = Math.min(Math.max(0.3, gameZoom), 3.0); // Allow larger zoom ranges
+        gameZoom = Math.min(Math.max(0.3, gameZoom), 3.0);
         document.getElementById('zoomSlider').value = gameZoom;
         document.getElementById('zoomValTxt').innerText = gameZoom.toFixed(1);
     }
@@ -528,33 +533,60 @@ document.getElementById('zoomSlider').addEventListener('input', e => {
     document.getElementById('zoomValTxt').innerText = gameZoom.toFixed(1);
 });
 
-// ====== 手機控制邏輯 ======
+// ====== 手機多指控制邏輯優化 ======
 let touchAiming = false;
 let mobileAimX = 0; let mobileAimY = 0;
 
 const joyR = document.getElementById('joyRight');
 const knobR = document.getElementById('joyRightKnob');
 let joyRCenter = {x:0,y:0};
+let joyRTouchId = null;
+
 joyR.addEventListener('touchstart', e => {
     e.preventDefault();
-    let rect = joyR.getBoundingClientRect();
-    joyRCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
-    handleJoyR(e.touches); touchAiming = true;
-}, {passive: false});
-joyR.addEventListener('touchmove', e => { e.preventDefault(); handleJoyR(e.touches); }, {passive: false});
-joyR.addEventListener('touchend', e => { e.preventDefault(); touchAiming = false; knobR.style.transform = `translate(0px, 0px)`; }, {passive: false});
-
-function handleJoyR(touches) {
-    for(let i=0; i<touches.length; i++) {
-        let dx = touches[i].clientX - joyRCenter.x;
-        let dy = touches[i].clientY - joyRCenter.y;
-        let dist = Math.hypot(dx, dy);
-        if (dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
-        knobR.style.transform = `translate(${dx}px, ${dy}px)`;
-        if(dist > 5) {
-            mobileAimX = canvas.width/2 + dx*10; 
-            mobileAimY = canvas.height/2 + dy*10;
+    for(let touch of e.changedTouches) {
+        if (joyRTouchId === null) {
+            joyRTouchId = touch.identifier;
+            let rect = joyR.getBoundingClientRect();
+            joyRCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+            updateJoyR(touch);
+            touchAiming = true;
         }
+    }
+}, {passive: false});
+
+joyR.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for(let touch of e.changedTouches) {
+        if (touch.identifier === joyRTouchId) {
+            updateJoyR(touch);
+        }
+    }
+}, {passive: false});
+
+joyR.addEventListener('touchend', endJoyR, {passive: false});
+joyR.addEventListener('touchcancel', endJoyR, {passive: false});
+
+function endJoyR(e) {
+    e.preventDefault();
+    for(let touch of e.changedTouches) {
+        if (touch.identifier === joyRTouchId) {
+            joyRTouchId = null;
+            touchAiming = false; 
+            knobR.style.transform = `translate(0px, 0px)`;
+        }
+    }
+}
+
+function updateJoyR(touch) {
+    let dx = touch.clientX - joyRCenter.x;
+    let dy = touch.clientY - joyRCenter.y;
+    let dist = Math.hypot(dx, dy);
+    if (dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
+    knobR.style.transform = `translate(${dx}px, ${dy}px)`;
+    if(dist > 5) {
+        mobileAimX = canvas.width/2 + dx*10; 
+        mobileAimY = canvas.height/2 + dy*10;
     }
 }
 
@@ -562,24 +594,51 @@ const joyL = document.getElementById('joyLeft');
 const knobL = document.getElementById('joyLeftKnob');
 let joyLCenter = {x:0,y:0};
 let joyLActive = false; let joyLDx = 0; let joyLDy = 0;
+let joyLTouchId = null;
+
 joyL.addEventListener('touchstart', e => {
     e.preventDefault();
-    let rect = joyL.getBoundingClientRect();
-    joyLCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
-    handleJoyL(e.touches); joyLActive = true;
-}, {passive: false});
-joyL.addEventListener('touchmove', e => { e.preventDefault(); handleJoyL(e.touches); }, {passive: false});
-joyL.addEventListener('touchend', e => { e.preventDefault(); joyLActive = false; joyLDx = 0; joyLDy = 0; knobL.style.transform = `translate(0px, 0px)`; }, {passive: false});
-
-function handleJoyL(touches) {
-    for(let i=0; i<touches.length; i++) {
-        let dx = touches[i].clientX - joyLCenter.x;
-        let dy = touches[i].clientY - joyLCenter.y;
-        let dist = Math.hypot(dx, dy);
-        if (dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
-        knobL.style.transform = `translate(${dx}px, ${dy}px)`;
-        joyLDx = dx; joyLDy = dy;
+    for(let touch of e.changedTouches) {
+        if (joyLTouchId === null) {
+            joyLTouchId = touch.identifier;
+            let rect = joyL.getBoundingClientRect();
+            joyLCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+            updateJoyL(touch);
+            joyLActive = true;
+        }
     }
+}, {passive: false});
+
+joyL.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for(let touch of e.changedTouches) {
+        if (touch.identifier === joyLTouchId) {
+            updateJoyL(touch);
+        }
+    }
+}, {passive: false});
+
+joyL.addEventListener('touchend', endJoyL, {passive: false});
+joyL.addEventListener('touchcancel', endJoyL, {passive: false});
+
+function endJoyL(e) {
+    e.preventDefault();
+    for(let touch of e.changedTouches) {
+        if (touch.identifier === joyLTouchId) {
+            joyLTouchId = null;
+            joyLActive = false; joyLDx = 0; joyLDy = 0; 
+            knobL.style.transform = `translate(0px, 0px)`;
+        }
+    }
+}
+
+function updateJoyL(touch) {
+    let dx = touch.clientX - joyLCenter.x;
+    let dy = touch.clientY - joyLCenter.y;
+    let dist = Math.hypot(dx, dy);
+    if (dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
+    knobL.style.transform = `translate(${dx}px, ${dy}px)`;
+    joyLDx = dx; joyLDy = dy;
 }
 
 document.getElementById('mobBtnSkill').addEventListener('touchstart', e => {
@@ -756,7 +815,6 @@ function clearGameData() {
     }
 }
 
-// 修復存檔
 document.getElementById('repairSaveBtn').addEventListener('click', () => {
     if (confirm("遇到遊戲卡死、數值變成 NaN 或是無法遊玩嗎？\n點擊「確定」將嘗試校正您的存檔資料（不會清空進度）。")) repairGameData();
 });
@@ -1086,12 +1144,12 @@ document.getElementById('startBtn').addEventListener('click', () => { isMultipla
 document.getElementById('toShopBtn').addEventListener('click', () => openShop('MENU'));
 document.getElementById('toShopFromGameBtn').addEventListener('click', () => openShop('PAUSED'));
 document.getElementById('pauseBtn').addEventListener('click', () => { state = 'PAUSED'; saveGameData(); showMenu('pause'); });
-document.getElementById('resumeBtn').addEventListener('click', () => { state = 'PLAYING'; showMenu('playing'); animId = requestAnimationFrame(animate); });
+document.getElementById('resumeBtn').addEventListener('click', () => { state = 'PLAYING'; showMenu('playing'); startGameLoop(); });
 document.getElementById('backToHomeFromPause').addEventListener('click', () => { if(isMultiplayer) leaveRoom(false); state = 'MENU'; saveGameData(); showMenu('main'); });
 document.getElementById('restartBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
 document.getElementById('clearSaveBtn').addEventListener('click', clearGameData);
 document.getElementById('backToHomeVictoryBtn').addEventListener('click', () => { if(isMultiplayer) leaveRoom(false); state = 'MENU'; showMenu('main'); });
-document.getElementById('enterEndlessBtn').addEventListener('click', () => { isEndless = true; currentWave++; saveGameData(); startWave(); animId = requestAnimationFrame(animate); });
+document.getElementById('enterEndlessBtn').addEventListener('click', () => { isEndless = true; currentWave++; saveGameData(); startWave(); startGameLoop(); });
 document.getElementById('exportSaveBtn').addEventListener('click', () => { const data = { gold, unlockedWeapons, currentWeapon, unlockedOffhands, currentOffhand, defeatedMonsters, hasDefeatedFinalBoss, settingShowBossUI, globalStats, weaponUpgrades, upgradeCosts, maxDifficultyUnlocked, gachaPoints, totalDraws, killCounters, weaponFragments, weaponStars, shieldLvl }; prompt(`請複製以下這串【${currentUser}】的備份代碼：`, btoa(encodeURIComponent(JSON.stringify(data)))); });
 document.getElementById('importSaveBtn').addEventListener('click', () => {
     const inputData = prompt(`請貼上要覆蓋給【${currentUser}】的存檔代碼：`);
@@ -1258,7 +1316,7 @@ function resumeGameAfterRelic() {
     document.getElementById('relicUI').style.display = 'none';
     if (state !== 'PLAYING') {
         state = 'PLAYING';
-        animId = requestAnimationFrame(animate); 
+        startGameLoop(); 
     }
 }
 
@@ -1269,6 +1327,30 @@ function getAngleFromKeys(up, down, left, right, defaultAngle) {
     if (keys[left]) dx -= 1; if (keys[right]) dx += 1;
     if (dx === 0 && dy === 0) return defaultAngle;
     return Math.atan2(dy, dx);
+}
+
+function triggerThorns(dmgTaken) {
+    if(!activeRelics.thorns) return;
+    let diff = selectedDifficulty;
+    let reflectDmg = getSingleBulletDamage() * dmgTaken / 8 / diff;
+    
+    ctx.beginPath(); ctx.arc(player.x, player.y, canvas.width, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255, 50, 50, 0.2)'; ctx.fill();
+    
+    let killCount = 0;
+    enemies.forEach(e => {
+        if (MONSTER_DATA[e.type]?.isBoss) {
+            e.hp -= reflectDmg * 0.01;
+        } else {
+            if (killCount < 10) {
+                e.hp -= reflectDmg;
+                if (e.hp <= 0) killCount++;
+            } else {
+                e.hp = 1;
+                e.frozenTimer = 180;
+            }
+        }
+    });
 }
 
 function initGame() {
@@ -1294,7 +1376,7 @@ function initGame() {
         }, 100);
     }
     
-    updateUI(); startWave(); animId = requestAnimationFrame(animate);
+    updateUI(); startWave(); startGameLoop();
 }
 
 function startWave() {
@@ -1430,7 +1512,15 @@ function triggerLevelUp() {
         let btn = document.createElement('button'); btn.className = 'menu-btn upgrade-btn'; let rColor = RARITIES[choice.rarity].color; btn.style.borderColor = rColor;
         if (choice.rarity === '神話' || choice.rarity === '神聖' || choice.rarity === '傳奇') { btn.style.boxShadow = `0 0 15px ${rColor}88`; }
         btn.innerHTML = `<div style="color: ${rColor}; font-size: 14px; font-weight: bold; letter-spacing: 2px;">✦ ${choice.rarity} ✦</div><strong style="color: ${rColor}; text-shadow: 0 0 5px ${rColor};">${choice.name}</strong><span>${choice.desc}</span>`;
-        btn.onclick = () => { choice.action(); if (choice.rarity === '獨家') sessionStats.exclusivePicks++; if (sessionExp >= sessionMaxExp) { sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp(); } else { state = 'PLAYING'; showMenu('playing'); updateUI(); animId = requestAnimationFrame(animate); } };
+        btn.onclick = () => { 
+            choice.action(); 
+            if (choice.rarity === '獨家') sessionStats.exclusivePicks++; 
+            if (sessionExp >= sessionMaxExp) { 
+                sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp(); 
+            } else { 
+                state = 'PLAYING'; showMenu('playing'); updateUI(); startGameLoop(); 
+            } 
+        };
         container.appendChild(btn);
     });
 }
@@ -1619,7 +1709,7 @@ function animate() {
         if (sessionStats.radiantAuraTimer >= triggerFrames) {
             sessionStats.radiantAuraTimer = 0;
             let auraRadius = 300 / diff;
-            let auraDmg = getSingleBulletDamage() / 20 / diff; // Use single bullet damage ref
+            let auraDmg = getSingleBulletDamage() / 20 / diff; 
             
             ctx.beginPath();
             ctx.arc(player.x, player.y, auraRadius, 0, Math.PI * 2);
@@ -1855,14 +1945,20 @@ function animate() {
             const distToPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
             if (distToPlayer - enemy.radius - player.radius < 1) {
                 let dmgToPlayer = enemy.damage;
-                if (s1Active && isShieldBlocking(enemy, myAimAngle)) dmgToPlayer *= 0.5;
-                if (s2Active && isShieldBlocking(enemy, shopShieldAngle)) dmgToPlayer *= 0.5;
-                if (tempActive && isShieldBlocking(enemy, tempShieldAngle)) dmgToPlayer *= 0.5;
+                let isBlocked = false;
+                
+                if (s1Active && isShieldBlocking(enemy, myAimAngle)) isBlocked = true;
+                if (s2Active && isShieldBlocking(enemy, shopShieldAngle)) isBlocked = true;
+                if (tempActive && isShieldBlocking(enemy, tempShieldAngle)) isBlocked = true;
+
+                if (isBlocked) {
+                    dmgToPlayer *= 0.5;
+                }
 
                 hp -= dmgToPlayer; updateUI();
                 if (activeRelics.thorns && dmgToPlayer > 0) triggerThorns(dmgToPlayer);
                 
-                // 近戰怪物攻擊後自爆死亡 (排除 Boss)
+                // 近戰怪造成傷害後判定死亡 (Kamikaze)
                 if (!MONSTER_DATA[enemy.type]?.isBoss && enemy.type !== 'ranged') {
                     enemy.hp = 0;
                 }
