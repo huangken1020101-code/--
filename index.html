@@ -8,7 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; background: #222; font-family: "Microsoft JhengHei", Arial, sans-serif; cursor: crosshair; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #222; font-family: "Microsoft JhengHei", Arial, sans-serif; cursor: crosshair; user-select: none; touch-action: none; /* 防止手機滑動刷新 */ }
         canvas { display: block; background: #1a1a1a; }
         
         #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 18px; display: none; pointer-events: none; background: rgba(0, 0, 0, 0.6); padding: 10px; border-radius: 8px; border: 1px solid #555; z-index: 5;}
@@ -72,10 +72,10 @@
         .prob-row:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); transform: translateX(5px); }
         .prob-row.active { background: rgba(255, 255, 255, 0.15); border-color: #ffc107; }
 
-        #probDetails, #bestiaryContainer { background: rgba(0, 0, 0, 0.7); padding: 20px; border-radius: 10px; border: 1px solid #444; width: 480px; height: 420px; overflow-y: auto; text-align: left; }
-        #probDetails::-webkit-scrollbar, #bestiaryContainer::-webkit-scrollbar { width: 8px; }
-        #probDetails::-webkit-scrollbar-track, #bestiaryContainer::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
-        #probDetails::-webkit-scrollbar-thumb, #bestiaryContainer::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
+        #probDetails, #bestiaryContainer, #relicBestiaryContainer { background: rgba(0, 0, 0, 0.7); padding: 20px; border-radius: 10px; border: 1px solid #444; width: 480px; height: 420px; overflow-y: auto; text-align: left; }
+        #probDetails::-webkit-scrollbar, #bestiaryContainer::-webkit-scrollbar, #relicBestiaryContainer::-webkit-scrollbar { width: 8px; }
+        #probDetails::-webkit-scrollbar-track, #bestiaryContainer::-webkit-scrollbar-track, #relicBestiaryContainer::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
+        #probDetails::-webkit-scrollbar-thumb, #bestiaryContainer::-webkit-scrollbar-thumb, #relicBestiaryContainer::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
         
         .detail-item { margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid #fff; }
         .detail-item-title { color: #fff; font-size: 18px; font-weight: bold; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between; }
@@ -96,9 +96,15 @@
         .player-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px dashed #444; font-size: 18px; }
         .host-crown { color: #ffeb3b; font-weight: bold; margin-right: 5px; }
         
-        .fragment-item { background: rgba(255,255,255,0.1); border: 1px solid #00d2ff; padding: 10px; border-radius: 8px; text-align: center; width: 140px; }
-        .fragment-item span { display: block; font-size: 18px; font-weight: bold; color: #ffc107; }
-        .fragment-item small { color: #ccc; }
+        .fragment-item { background: rgba(255,255,255,0.1); border: 1px solid #00d2ff; padding: 10px; border-radius: 8px; text-align: center; width: 150px; display: flex; flex-direction: column; justify-content: center; }
+        .fragment-item span { display: block; font-size: 18px; font-weight: bold; color: #ffc107; margin-bottom: 5px;}
+        .fragment-item small { color: #ccc; line-height: 1.3; }
+
+        /* Mobile Controls */
+        #mobileControls { display:none; position:absolute; bottom:0; left:0; width:100%; height:100%; pointer-events:none; z-index:20; }
+        .joy-area { position:absolute; width:120px; height:120px; background:rgba(255,255,255,0.15); border-radius:50%; pointer-events:auto; border: 2px solid rgba(255,255,255,0.3); }
+        .joy-knob { position:absolute; top:40px; left:40px; width:40px; height:40px; background:rgba(255,255,255,0.6); border-radius:50%; pointer-events:none; }
+        .mob-btn { width: 60px; height: 60px; border-radius:50%; border:none; font-weight:bold; color:white; opacity:0.8; pointer-events:auto; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
@@ -107,7 +113,7 @@
         <div style="color: #ffc107; font-weight: bold;">等級: <span id="levelDisplay">1</span> (<span id="expDisplay">0 / 10</span>)</div>
         <div>金幣: <span id="goldDisplay">0</span></div>
         <div>血量: <span id="hpDisplay">10.00 / 10.00</span></div>
-        <div>攻擊力: <span id="dmgDisplay">1.0</span></div>
+        <div>攻擊力(單發): <span id="dmgDisplay">1.0</span></div>
         <div style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px; font-size: 16px;">
             武裝狀態(左鍵切換): <span id="activeSlotDisplay" style="color: #00d2ff; font-weight: bold;">主武器</span>
         </div>
@@ -115,6 +121,20 @@
             塔盾技能(E): <span id="shieldCooldownText" style="color:#4caf50; font-weight:bold;">準備就緒</span>
         </div>
         <button id="pauseBtn">暫停遊戲 (可開軍火庫)</button>
+    </div>
+
+    <div id="mobileControls">
+        <div id="joyLeft" class="joy-area" style="bottom:40px; left:40px;">
+            <div id="joyLeftKnob" class="joy-knob"></div>
+        </div>
+        <div id="joyRight" class="joy-area" style="bottom:40px; right:40px;">
+            <div id="joyRightKnob" class="joy-knob"></div>
+        </div>
+        <div style="position:absolute; bottom:180px; right:40px; display:flex; flex-direction:column; gap:20px; pointer-events:none;">
+            <button id="mobBtnSkill" class="mob-btn" style="background:#4caf50;">技能</button>
+            <button id="mobBtnSwitch" class="mob-btn" style="background:#00d2ff;">切換</button>
+            <button id="mobBtnTwin" class="mob-btn" style="background:#ffeb3b; color:black; display:none;">雙持</button>
+        </div>
     </div>
 
     <div id="topCenterUI">
@@ -202,8 +222,8 @@
                 <button id="drawGachaBtn" class="menu-btn shop-btn" style="padding: 15px 40px; font-size: 22px;">消耗 <span id="gachaCostDisplay">10</span> 點抽獎</button>
             </div>
             
-            <div class="section-title">我的碎片庫存</div>
-            <div id="fragmentsList" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; width: 600px; min-height: 100px;">
+            <div class="section-title">我的碎片庫存與機率</div>
+            <div id="fragmentsList" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; width: 700px; min-height: 100px;">
                 </div>
             <br><br>
             <button id="closeGachaBtn" class="menu-btn secondary-btn">返回主頁</button>
@@ -216,6 +236,11 @@
             <div class="shop-item" style="width: 400px; justify-content: space-between;">
                 <span style="font-size: 20px;">顯示 Boss 巨大血條與名稱</span>
                 <button id="toggleBossUIBtn" class="menu-btn victory-btn" style="min-width: 100px; padding: 8px;">開啟</button>
+            </div>
+            <div class="shop-item" style="width: 400px; justify-content: space-between;">
+                <span style="font-size: 20px;">畫面縮放 (Zoom)</span>
+                <input type="range" id="zoomSlider" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 120px;">
+                <span id="zoomValTxt" style="font-weight:bold; color:#00d2ff;">1.0</span>
             </div>
             <br>
             <button id="closeSettingsBtn" class="menu-btn secondary-btn">返回</button>
@@ -260,6 +285,7 @@
             <div class="row-group" style="margin-bottom: 20px;">
                 <button id="probTabUpgBtn" class="menu-btn tab-btn active-tab">升級機率表</button>
                 <button id="probTabBestiaryBtn" class="menu-btn tab-btn">怪物圖鑑</button>
+                <button id="probTabRelicBtn" class="menu-btn tab-btn">遺物圖鑑</button>
             </div>
             <div id="probUpgSection" style="display: flex; gap: 20px; align-items: flex-start; justify-content: center; width: 100%;">
                 <div id="probList"></div>
@@ -267,6 +293,9 @@
             </div>
             <div id="probBestiarySection" class="hidden" style="width: 100%; display: flex; justify-content: center;">
                 <div id="bestiaryContainer"></div>
+            </div>
+            <div id="probRelicSection" class="hidden" style="width: 100%; display: flex; justify-content: center;">
+                <div id="relicBestiaryContainer" style="background: rgba(0, 0, 0, 0.7); padding: 20px; border-radius: 10px; border: 1px solid #444; width: 600px; height: 420px; overflow-y: auto; text-align: left;"></div>
             </div>
             <br>
             <button id="closeProbBtn" class="menu-btn secondary-btn">返回主頁</button>
@@ -440,6 +469,11 @@ let hasDefeatedFinalBoss = false;
 let sessionBossKills = { mini: 0, big: 0, final_boss: 0 };
 let settingShowBossUI = true;
 
+// ====== 縮放與移動偵測 ======
+let gameZoom = 1.0;
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window);
+if(isMobile) document.getElementById('mobileControls').style.display = 'block';
+
 // ====== 抽獎與升星系統變數 ======
 let gachaPoints = 0;
 let totalDraws = 0;
@@ -453,6 +487,7 @@ let shieldSkillCooldownTimer = 0;
 let bossKillsForRelic = 0;
 let activeRelics = { demonPact: false, glassCannon: false, greedSkull: false, absoluteZero: false, thorns: false, giantSlayer: false, radiantAura: false, timeWarp: false, infiniteBandolier: false, soulReaper: false };
 let soulReaperKills = 0;
+let relicPending = false; // 防止在遺物彈出前過關
 
 const RELIC_DATA = [
     { id: 'demonPact', name: "惡魔契約", cost: () => 24, desc: () => "最終傷害 +60%，擊殺敵人有10%機率回復 0.1 血量。" },
@@ -479,6 +514,86 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
 window.addEventListener('contextmenu', e => { if (state === 'PLAYING') e.preventDefault(); });
+
+window.addEventListener('wheel', e => {
+    if (state === 'PLAYING') {
+        gameZoom += e.deltaY * -0.001;
+        gameZoom = Math.min(Math.max(0.3, gameZoom), 3.0); // Allow larger zoom ranges
+        document.getElementById('zoomSlider').value = gameZoom;
+        document.getElementById('zoomValTxt').innerText = gameZoom.toFixed(1);
+    }
+});
+document.getElementById('zoomSlider').addEventListener('input', e => {
+    gameZoom = parseFloat(e.target.value);
+    document.getElementById('zoomValTxt').innerText = gameZoom.toFixed(1);
+});
+
+// ====== 手機控制邏輯 ======
+let touchAiming = false;
+let mobileAimX = 0; let mobileAimY = 0;
+
+const joyR = document.getElementById('joyRight');
+const knobR = document.getElementById('joyRightKnob');
+let joyRCenter = {x:0,y:0};
+joyR.addEventListener('touchstart', e => {
+    e.preventDefault();
+    let rect = joyR.getBoundingClientRect();
+    joyRCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+    handleJoyR(e.touches); touchAiming = true;
+}, {passive: false});
+joyR.addEventListener('touchmove', e => { e.preventDefault(); handleJoyR(e.touches); }, {passive: false});
+joyR.addEventListener('touchend', e => { e.preventDefault(); touchAiming = false; knobR.style.transform = `translate(0px, 0px)`; }, {passive: false});
+
+function handleJoyR(touches) {
+    for(let i=0; i<touches.length; i++) {
+        let dx = touches[i].clientX - joyRCenter.x;
+        let dy = touches[i].clientY - joyRCenter.y;
+        let dist = Math.hypot(dx, dy);
+        if (dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
+        knobR.style.transform = `translate(${dx}px, ${dy}px)`;
+        if(dist > 5) {
+            mobileAimX = canvas.width/2 + dx*10; 
+            mobileAimY = canvas.height/2 + dy*10;
+        }
+    }
+}
+
+const joyL = document.getElementById('joyLeft');
+const knobL = document.getElementById('joyLeftKnob');
+let joyLCenter = {x:0,y:0};
+let joyLActive = false; let joyLDx = 0; let joyLDy = 0;
+joyL.addEventListener('touchstart', e => {
+    e.preventDefault();
+    let rect = joyL.getBoundingClientRect();
+    joyLCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+    handleJoyL(e.touches); joyLActive = true;
+}, {passive: false});
+joyL.addEventListener('touchmove', e => { e.preventDefault(); handleJoyL(e.touches); }, {passive: false});
+joyL.addEventListener('touchend', e => { e.preventDefault(); joyLActive = false; joyLDx = 0; joyLDy = 0; knobL.style.transform = `translate(0px, 0px)`; }, {passive: false});
+
+function handleJoyL(touches) {
+    for(let i=0; i<touches.length; i++) {
+        let dx = touches[i].clientX - joyLCenter.x;
+        let dy = touches[i].clientY - joyLCenter.y;
+        let dist = Math.hypot(dx, dy);
+        if (dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
+        knobL.style.transform = `translate(${dx}px, ${dy}px)`;
+        joyLDx = dx; joyLDy = dy;
+    }
+}
+
+document.getElementById('mobBtnSkill').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (state === 'PLAYING' && currentOffhand === 'shield' && shieldLvl >= 2 && shieldSkillCooldownTimer <= 0 && activeSlot === 'offhand') triggerShieldSkill();
+}, {passive: false});
+document.getElementById('mobBtnSwitch').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (state === 'PLAYING' && currentOffhand !== 'none') { activeSlot = (activeSlot === 'main') ? 'offhand' : 'main'; updateUI(); }
+}, {passive: false});
+document.getElementById('mobBtnTwin').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (state === 'PLAYING' && frames - lastShield2SyncFrame >= 1200) { shield2SyncActive = true; shield2SyncTimer = 300; lastShield2SyncFrame = frames; }
+}, {passive: false});
 
 function triggerShieldSkill() {
     ctx.fillStyle = 'rgba(0, 255, 255, 0.4)';
@@ -557,7 +672,7 @@ const UPGRADE_POOL = [
     { id: 'myth_hp', name: '神話之軀', desc: '最大血量 +20，並立刻回滿血量', type: 'global', rarity: '神話', action: () => { maxHp += 20; hp = maxHp; } },
     { id: 'm_time', name: '時空凝滯', desc: '所有敵人移動速度減慢 40%', type: 'global', rarity: '神話', action: () => { sessionStats.enemySpeedMult *= 0.60; } },
     { id: 'm_wealth', name: '財富密碼', desc: '立刻獲得 10000 金幣，且擊殺掉落 +100%', type: 'global', rarity: '神話', action: () => { gold += 10000; sessionGold += 10000; sessionStats.goldBonus += 1.0; } },
-    { id: 'm_explosion', name: '藝術就是爆炸', desc: '子彈附帶範圍傷害 (範圍: 300 * 等級, 傷害: 武器最終傷害 * 等級 / 5)', type: 'global', rarity: '神話', action: () => { sessionStats.explosionLvl = (sessionStats.explosionLvl || 0) + 1; } },
+    { id: 'm_explosion', name: '藝術就是爆炸', desc: '子彈附帶範圍傷害 (範圍: 150, 傷害: 武器最終傷害 * 等級 / 5)<br>等級大於1時，範圍內受爆風波及之怪物會產生連鎖爆炸！', type: 'global', rarity: '神話', action: () => { sessionStats.explosionLvl = (sessionStats.explosionLvl || 0) + 1; } },
     { id: 'divine_all', name: '神聖覺醒', desc: '傷害+50% 射速+30% 血量+10', type: 'global', rarity: '神聖', action: () => { sessionStats.damageMult += 0.50; sessionStats.fireRateMult *= 0.70; maxHp += 10; hp += 10; } },
     { id: 'd_immortal', name: '不朽之軀', desc: '最大血量 +50，立刻回滿血量', type: 'global', rarity: '神聖', action: () => { maxHp += 50; hp = maxHp; } },
     { id: 'd_ultimate', name: '終極兵器', desc: '傷害+100%，全武器發射數 +1', type: 'global', rarity: '神聖', action: () => { sessionStats.damageMult += 1.0; sessionStats.extraBulletsGlobal += 1; } },
@@ -601,19 +716,13 @@ async function loadGameData() {
             weaponUpgrades = data.weaponUpgrades ?? { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } };
             maxDifficultyUnlocked = data.maxDifficultyUnlocked ?? 1;
             
-            // 抽獎與升星新資料
-            gachaPoints = data.gachaPoints ?? 0;
-            totalDraws = data.totalDraws ?? 0;
-            killCounters = data.killCounters ?? {};
-            weaponFragments = data.weaponFragments ?? {};
-            weaponStars = data.weaponStars ?? {};
-            shieldLvl = data.shieldLvl ?? 1;
+            gachaPoints = data.gachaPoints ?? 0; totalDraws = data.totalDraws ?? 0; killCounters = data.killCounters ?? {};
+            weaponFragments = data.weaponFragments ?? {}; weaponStars = data.weaponStars ?? {}; shieldLvl = data.shieldLvl ?? 1;
         } else {
             gold = 0; unlockedWeapons = ['pistol']; currentWeapon = 'pistol'; unlockedOffhands = []; currentOffhand = 'none'; defeatedMonsters = []; hasDefeatedFinalBoss = false; settingShowBossUI = true;
             globalStats = { fireRateMult: 1.0, damageMult: 1.0, fireRateLvl: 1, damageLvl: 1, hpMult: 1.0, hpLvl: 1 };
             weaponUpgrades = { pistol: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, machineGun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 }, shotgun: { dmgLvl: 1, frLvl: 1, hpLvl: 1 } };
             maxDifficultyUnlocked = 1;
-            
             gachaPoints = 0; totalDraws = 0; killCounters = {}; weaponFragments = {}; weaponStars = {}; shieldLvl = 1;
         }
         if (!WEAPONS[currentWeapon]) currentWeapon = 'pistol';
@@ -627,6 +736,7 @@ async function loadGameData() {
         document.getElementById('multiplayerBtn').disabled = false;
         document.getElementById('currentUserDisplay').innerText = `👤 目前指揮官: ${currentUser}`;
         if (maxDifficultyUnlocked > 1) document.getElementById('shopTabOffhandBtn').classList.remove('hidden');
+        if (unlockedOffhands.includes('shield2') && isMobile) document.getElementById('mobBtnTwin').style.display = 'block';
         updateMainMenuDiffUI(); updateUI(); updateSettingsUI();
     }
 }
@@ -687,16 +797,15 @@ async function repairGameData() {
 
 window.addEventListener('beforeunload', saveGameData);
 window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
-// 滑鼠左鍵切換主/副手，右鍵觸發雙持被動
+
 window.addEventListener('mousedown', (e) => {
-    if (state !== 'PLAYING') return;
+    if (state !== 'PLAYING' || isMobile) return;
     if (e.button === 2 && unlockedOffhands.includes('shield2')) {
         if (frames - lastShield2SyncFrame >= 1200) { shield2SyncActive = true; shield2SyncTimer = 300; lastShield2SyncFrame = frames; }
     } else if (e.button === 0) {
         if (currentOffhand !== 'none') { activeSlot = (activeSlot === 'main') ? 'offhand' : 'main'; updateUI(); }
     }
 });
-// 設定選單邏輯
 function openSettings(fromState) { previousState = fromState; state = 'SETTINGS'; showMenu('settings'); updateSettingsUI(); }
 document.getElementById('settingsBtn').addEventListener('click', () => openSettings('MENU'));
 document.getElementById('settingsBtnPause').addEventListener('click', () => openSettings('PAUSED'));
@@ -738,28 +847,19 @@ function calculateWeaponUpgradeCost(baseCost, towerCost, level) {
     return Math.floor(Math.floor(baseCost + (towerCost * 0.1)) * Math.pow(1.5, level - 1));
 }
 
-function getCurrentDPS() {
+function getSingleBulletDamage() {
     const weapon = WEAPONS[currentWeapon]; 
     let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0;
-    let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0; 
     const wUpg = weaponUpgrades[currentWeapon] || {dmgLvl: 1, frLvl: 1};
     let star = weaponStars[currentWeapon] || 0;
     const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); 
-    const wFrBonus = Math.pow(0.95, wUpg.frLvl - 1) * Math.pow(0.95, star); // 星級攻速加成
-    let starDmgBonus = 1 + star * 0.2; // 星級傷害加成
+    let starDmgBonus = 1 + star * 0.2; 
 
     let finalDamage = weapon.damage * globalStats.damageMult * wDmgBonus * sessionStats.damageMult * weaponDmgMult * starDmgBonus; 
     if (activeRelics.infiniteBandolier) finalDamage *= 1.3;
     if (activeRelics.demonPact) finalDamage *= 1.6;
     if (activeRelics.soulReaper) finalDamage *= (1 + (Math.floor(soulReaperKills / 50) * 0.01));
-    let finalFireRate = Math.max(1, Math.floor(weapon.fireRate * globalStats.fireRateMult * wFrBonus * sessionStats.fireRateMult * weaponFrMult));
-    if (activeRelics.glassCannon) finalFireRate = Math.max(1, Math.floor(finalFireRate * 0.7));
-
-    let baseBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal;
-    if (activeRelics.glassCannon) baseBullets += 2;
-    let bulletMult = sessionStats.weaponMods[currentWeapon]?.bulletMult || 1.0;
-    let finalBullets = Math.round(baseBullets * bulletMult);
-    return finalDamage * finalBullets * (60 / finalFireRate);
+    return finalDamage;
 }
 
 function updateUI() {
@@ -770,7 +870,7 @@ function updateUI() {
     document.getElementById('shopGoldDisplay').innerText = gold;
     document.getElementById('levelDisplay').innerText = sessionLevel; document.getElementById('expDisplay').innerText = `${Math.floor(sessionExp)} / ${sessionMaxExp}`;
     
-    document.getElementById('dmgDisplay').innerText = getCurrentDPS().toFixed(1);
+    document.getElementById('dmgDisplay').innerText = getSingleBulletDamage().toFixed(2);
     const slotDisplay = document.getElementById('activeSlotDisplay');
     if (activeSlot === 'main') { slotDisplay.innerText = `主武器 (${WEAPONS[currentWeapon].name})`; slotDisplay.style.color = '#00d2ff';
     } else { slotDisplay.innerText = `防禦型態 (${OFFHANDS[currentOffhand].name})`; slotDisplay.style.color = '#4caf50'; }
@@ -904,11 +1004,14 @@ window.buyOrEquip = function(weaponKey) {
 window.buyOrEquipOffhand = function(key) {
     if (previousState === 'PAUSED') return alert("戰鬥中無法購買或更換！");
     if (unlockedOffhands.includes(key)) { currentOffhand = key; } else if (gold >= OFFHANDS[key].cost) { gold -= OFFHANDS[key].cost; unlockedOffhands.push(key); currentOffhand = key; }
+    if (unlockedOffhands.includes('shield2') && isMobile) document.getElementById('mobBtnTwin').style.display = 'block';
     saveGameData(); updateShopUI(); updateUI();
 };
 window.buyShield2 = function() {
     if (previousState === 'PAUSED') return;
-    if (gold >= 50000) { gold -= 50000; unlockedOffhands.push('shield2'); saveGameData(); updateShopUI(); updateUI(); }
+    if (gold >= 50000) { gold -= 50000; unlockedOffhands.push('shield2'); saveGameData(); updateShopUI(); updateUI(); 
+        if(isMobile) document.getElementById('mobBtnTwin').style.display = 'block';
+    }
 };
 document.getElementById('upg_w_dmgBtn').addEventListener('click', () => { const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost; const cost = calculateWeaponUpgradeCost(200, towerCost, wUpg.dmgLvl); const maxLvl = 10 + (weaponStars[currentWeapon]||0)*5; if (gold >= cost && wUpg.dmgLvl < maxLvl) { gold -= cost; wUpg.dmgLvl++; saveGameData(); updateShopUI(); updateUI(); } });
 document.getElementById('upg_w_frBtn').addEventListener('click', () => { const wUpg = weaponUpgrades[currentWeapon]; const towerCost = WEAPONS[currentWeapon].cost; const cost = calculateWeaponUpgradeCost(200, towerCost, wUpg.frLvl); const maxLvl = 10 + (weaponStars[currentWeapon]||0)*5; if (gold >= cost && wUpg.frLvl < maxLvl) { gold -= cost; wUpg.frLvl++; saveGameData(); updateShopUI(); updateUI(); } });
@@ -940,20 +1043,23 @@ document.getElementById('closeShopBtn').addEventListener('click', () => { state 
 // ─── 抽獎中心邏輯 ───
 document.getElementById('toGachaBtn').addEventListener('click', () => { openGachaMenu(); });
 document.getElementById('closeGachaBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); saveGameData(); });
-function openGachaMenu() {
-    state = 'GACHA'; showMenu('gacha'); updateGachaUI();
-}
+function openGachaMenu() { state = 'GACHA'; showMenu('gacha'); updateGachaUI(); }
 function updateGachaUI() {
     document.getElementById('gachaPointsDisplay').innerText = gachaPoints;
     let cost = 10 + totalDraws;
     document.getElementById('gachaCostDisplay').innerText = cost;
     document.getElementById('drawGachaBtn').disabled = gachaPoints < cost;
 
+    let pool = unlockedWeapons;
+    let totalWeight = 0;
+    let weights = pool.map(w => { let weight = 10000 / (WEAPONS[w].cost || 100); totalWeight += weight; return weight; });
+
     let fragHtml = '';
-    unlockedWeapons.forEach(w => {
+    unlockedWeapons.forEach((w, index) => {
         let count = weaponFragments[w] || 0;
         let star = weaponStars[w] || 0;
-        fragHtml += `<div class="fragment-item"><span>${WEAPONS[w].name}</span><small>碎片: ${count} | 星級: ${star}</small></div>`;
+        let prob = ((weights[index] / totalWeight) * 100).toFixed(1);
+        fragHtml += `<div class="fragment-item"><span>${WEAPONS[w].name}</span><small>碎片: ${count} | 星級: ${star}<br>抽取機率: ${prob}%</small></div>`;
     });
     document.getElementById('fragmentsList').innerHTML = fragHtml || '<p style="color:#aaa;">還沒有解鎖任何武器</p>';
 }
@@ -962,29 +1068,17 @@ document.getElementById('drawGachaBtn').addEventListener('click', () => {
     if (gachaPoints < cost) return;
     if (unlockedWeapons.length === 0) return alert("請先解鎖武器！");
     
-    gachaPoints -= cost;
-    totalDraws++;
+    gachaPoints -= cost; totalDraws++;
+    let pool = unlockedWeapons; let totalWeight = 0;
+    let weights = pool.map(w => { let weight = 10000 / (WEAPONS[w].cost || 100); totalWeight += weight; return weight; });
 
-    let pool = unlockedWeapons;
-    let totalWeight = 0;
-    let weights = pool.map(w => {
-        let wCost = WEAPONS[w].cost || 100;
-        let weight = 10000 / wCost;
-        totalWeight += weight;
-        return weight;
-    });
-
-    let rand = Math.random() * totalWeight;
-    let current = 0;
-    let selected = pool[0];
+    let rand = Math.random() * totalWeight; let current = 0; let selected = pool[0];
     for (let i = 0; i < pool.length; i++) {
         current += weights[i];
         if (rand <= current) { selected = pool[i]; break; }
     }
-
     weaponFragments[selected] = (weaponFragments[selected] || 0) + 1;
-    saveGameData(); updateGachaUI();
-    alert(`🎉 恭喜抽中【${WEAPONS[selected].name}】碎片 x1！`);
+    saveGameData(); updateGachaUI(); alert(`🎉 恭喜抽中【${WEAPONS[selected].name}】碎片 x1！`);
 });
 
 // ─── 綁定所有主選單與暫停選單按鈕 ───
@@ -1021,15 +1115,24 @@ document.getElementById('importSaveBtn').addEventListener('click', () => {
 });
 document.getElementById('showProbBtn').addEventListener('click', () => { state = 'PROB'; showMenu('prob'); renderProbabilities(); renderBestiary(); });
 document.getElementById('closeProbBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
+
 document.getElementById('probTabUpgBtn').addEventListener('click', () => {
-    document.getElementById('probTabUpgBtn').classList.add('active-tab'); document.getElementById('probTabBestiaryBtn').classList.remove('active-tab');
-    document.getElementById('probUpgSection').classList.remove('hidden'); document.getElementById('probBestiarySection').classList.add('hidden');
+    document.getElementById('probTabUpgBtn').classList.add('active-tab'); document.getElementById('probTabBestiaryBtn').classList.remove('active-tab'); document.getElementById('probTabRelicBtn').classList.remove('active-tab');
+    document.getElementById('probUpgSection').classList.remove('hidden'); document.getElementById('probBestiarySection').classList.add('hidden'); document.getElementById('probRelicSection').classList.add('hidden');
 });
 document.getElementById('probTabBestiaryBtn').addEventListener('click', () => {
-    document.getElementById('probTabBestiaryBtn').classList.add('active-tab'); document.getElementById('probTabUpgBtn').classList.remove('active-tab');
-    document.getElementById('probBestiarySection').classList.remove('hidden'); document.getElementById('probUpgSection').classList.add('hidden');
+    document.getElementById('probTabBestiaryBtn').classList.add('active-tab'); document.getElementById('probTabUpgBtn').classList.remove('active-tab'); document.getElementById('probTabRelicBtn').classList.remove('active-tab');
+    document.getElementById('probBestiarySection').classList.remove('hidden'); document.getElementById('probUpgSection').classList.add('hidden'); document.getElementById('probRelicSection').classList.add('hidden');
     renderBestiary();
 });
+document.getElementById('probTabRelicBtn').addEventListener('click', () => {
+    document.getElementById('probTabRelicBtn').classList.add('active-tab'); document.getElementById('probTabUpgBtn').classList.remove('active-tab'); document.getElementById('probTabBestiaryBtn').classList.remove('active-tab');
+    document.getElementById('probRelicSection').classList.remove('hidden'); document.getElementById('probUpgSection').classList.add('hidden'); document.getElementById('probBestiarySection').classList.add('hidden');
+    let relicHtml = '';
+    RELIC_DATA.forEach(r => { relicHtml += `<div class="monster-card"><h3 style="color:#ff4444;">${r.name}</h3><div class="m-desc">${typeof r.desc === 'function' ? r.desc(maxDifficultyUnlocked) : r.desc}</div></div>`; });
+    document.getElementById('relicBestiaryContainer').innerHTML = relicHtml;
+});
+
 // --- 多人連線大廳 ---
 document.getElementById('multiplayerBtn').addEventListener('click', () => { state = 'MP_MENU'; showMenu('mpMenu'); fetchRoomList(); autoRefreshTimer = setInterval(() => { refreshCountdown--; document.getElementById('refreshTimer').innerText = refreshCountdown; if(refreshCountdown <= 0) { fetchRoomList(); refreshCountdown = 10; } }, 1000); });
 document.getElementById('backToMainFromMp').addEventListener('click', () => { clearInterval(autoRefreshTimer); state = 'MENU'; showMenu('main'); });
@@ -1176,7 +1279,7 @@ function initGame() {
     playerHasTempShield = false;
     tempShieldAngle = 0; shopShieldAngle = 0; shield2SyncActive = false; shield2SyncTimer = 0; lastShield2SyncFrame = -9999;
     
-    bossKillsForRelic = 0; soulReaperKills = 0;
+    bossKillsForRelic = 0; soulReaperKills = 0; relicPending = false;
     activeRelics = { demonPact: false, glassCannon: false, greedSkull: false, absoluteZero: false, thorns: false, giantSlayer: false, radiantAura: false, timeWarp: false, infiniteBandolier: false, soulReaper: false };
     sessionStats = { damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, frostMagazineLevel: 0, weaponMods: { pistol: { extraBullets: 0, dmgMult: 1.0 }, machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0, bulletMult: 1.0 } } };
     bullets = []; enemyBullets = []; enemies = []; 
@@ -1186,7 +1289,7 @@ function initGame() {
         Object.keys(roomPlayers).forEach(k => { if(k !== userKey) mpOtherPlayersState[k] = { lastShotFrame: 0, nextShotFrame: 0 }; });
         syncIntervalTimer = setInterval(() => {
             if(state !== 'PLAYING') return;
-            const aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+            const aimAngle = (isMobile && touchAiming) ? Math.atan2(mobileAimY - player.y, mobileAimX - player.x) : Math.atan2(mouseY - player.y, mouseX - player.x);
             db.collection('rooms').doc(currentRoomId).update({ [`players.${userKey}.angle`]: aimAngle, [`players.${userKey}.weapon`]: currentWeapon, [`players.${userKey}.isShooting`]: (activeSlot === 'main') });
         }, 100);
     }
@@ -1443,10 +1546,38 @@ function isShieldBlocking(target, shieldAngle) {
     return Math.abs(angleDiff) <= Math.PI/2.5;
 }
 
+function triggerChainExplosion(ex, ey, radius, damage, chainsLeft, damagedEnemiesSet) {
+    ctx.beginPath(); ctx.arc(ex, ey, radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 100, 0, 0.3)'; ctx.fill();
+    
+    let nextTargets = [];
+    enemies.forEach(otherE => {
+        if (!damagedEnemiesSet.has(otherE) && Math.hypot(otherE.x - ex, otherE.y - ey) <= radius + otherE.radius) {
+            let splashDmg = damage;
+            if (activeRelics.giantSlayer && MONSTER_DATA[otherE.type]?.isBoss) splashDmg *= 3;
+            otherE.hp -= splashDmg;
+            damagedEnemiesSet.add(otherE);
+            nextTargets.push(otherE);
+        }
+    });
+    
+    if (chainsLeft > 0) {
+        nextTargets.forEach(t => {
+            triggerChainExplosion(t.x, t.y, radius, damage / 5, chainsLeft - 1, damagedEnemiesSet);
+        });
+    }
+}
+
 function animate() {
     if (state !== 'PLAYING') return; 
     animId = requestAnimationFrame(animate);
     ctx.fillStyle = 'rgba(26, 26, 26, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
+
+    // Apply Zoom Camera
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(gameZoom, gameZoom);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
     let tickRegen = 0.05 / 60;
     if ((sessionStats.okBandAidLvl || 0) > 1) { tickRegen += ((sessionStats.okBandAidLvl - 1) * 0.05) / 60; }
@@ -1460,16 +1591,23 @@ function animate() {
     
     let tempUp = 'w', tempDown = 's', tempLeft = 'a', tempRight = 'd';
     if (!unlockedOffhands.includes('shield2')) { tempUp = 'ArrowUp'; tempDown = 'ArrowDown'; tempLeft = 'ArrowLeft'; tempRight = 'ArrowRight'; }
-    tempShieldAngle = getAngleFromKeys(keys['w']||keys[tempUp]?'w':'w', keys['s']||keys[tempDown]?'s':'s', keys['a']||keys[tempLeft]?'a':'a', keys['d']||keys[tempRight]?'d':'d', tempShieldAngle);
-    shopShieldAngle = getAngleFromKeys('ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', shopShieldAngle);
-    if(shield2SyncActive) { shield2SyncTimer--; if(shield2SyncTimer <= 0) shield2SyncActive = false; }
-
-    if(shieldSkillCooldownTimer > 0) {
-        shieldSkillCooldownTimer--;
-        if (frames % 60 === 0) updateUI();
+    
+    let curShieldAngle = tempShieldAngle;
+    let curShopShieldAngle = shopShieldAngle;
+    if (isMobile && joyLActive) {
+        curShieldAngle = Math.atan2(joyLDy, joyLDx);
+        curShopShieldAngle = Math.atan2(joyLDy, joyLDx);
+    } else {
+        curShieldAngle = getAngleFromKeys(keys['w']||keys[tempUp]?'w':'w', keys['s']||keys[tempDown]?'s':'s', keys['a']||keys[tempLeft]?'a':'a', keys['d']||keys[tempRight]?'d':'d', tempShieldAngle);
+        curShopShieldAngle = getAngleFromKeys('ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', shopShieldAngle);
     }
+    tempShieldAngle = curShieldAngle;
+    shopShieldAngle = curShopShieldAngle;
 
-    const myAimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+    if(shield2SyncActive) { shield2SyncTimer--; if(shield2SyncTimer <= 0) shield2SyncActive = false; }
+    if(shieldSkillCooldownTimer > 0) { shieldSkillCooldownTimer--; if (frames % 60 === 0) updateUI(); }
+
+    const myAimAngle = (isMobile && touchAiming) ? Math.atan2(mobileAimY - player.y, mobileAimX - player.x) : Math.atan2(mouseY - player.y, mouseX - player.x);
     let isMainActive = (activeSlot === 'main');
     
     autoAimShoot(userKey, true, myAimAngle, currentWeapon, isMainActive);
@@ -1481,7 +1619,7 @@ function animate() {
         if (sessionStats.radiantAuraTimer >= triggerFrames) {
             sessionStats.radiantAuraTimer = 0;
             let auraRadius = 300 / diff;
-            let auraDmg = getCurrentDPS() / 20 / diff;
+            let auraDmg = getSingleBulletDamage() / 20 / diff; // Use single bullet damage ref
             
             ctx.beginPath();
             ctx.arc(player.x, player.y, auraRadius, 0, Math.PI * 2);
@@ -1560,7 +1698,7 @@ function animate() {
                         kc.endlessBoss = (kc.endlessBoss || 0) + 1;
                         if (kc.endlessBoss >= 10) { kc.endlessBoss -= 10; gachaPoints += selectedDifficulty; }
                     } else {
-                        gachaPoints += selectedDifficulty; // 非無盡1隻Boss=獲得點數
+                        gachaPoints += selectedDifficulty;
                     }
                     
                     sessionBossKills[enemy.type] = (sessionBossKills[enemy.type] || 0) + 1;
@@ -1569,7 +1707,8 @@ function animate() {
                     if (bossKillsForRelic >= requiredKills && !triggeredRelicThisFrame) {
                         bossKillsForRelic -= requiredKills;
                         triggeredRelicThisFrame = true;
-                        showRelicUI();
+                        relicPending = true;
+                        setTimeout(() => { if(state==='PLAYING') { relicPending=false; showRelicUI(); } }, 1000);
                     }
                 } else {
                     kc.normal = (kc.normal || 0) + 1;
@@ -1598,6 +1737,8 @@ function animate() {
         if (enemy.frozenTimer > 0) {
             enemy.frozenTimer--;
             ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fillStyle = enemy.color; ctx.fill();
+            if(enemy.type === 'final_boss') { ctx.lineWidth=2; ctx.strokeStyle='white'; ctx.stroke(); }
+            
             ctx.beginPath();
             ctx.arc(enemy.x, enemy.y, enemy.radius + 3, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0, 255, 255, 0.5)'; ctx.fill();
             ctx.fillStyle = 'white';
@@ -1696,8 +1837,9 @@ function animate() {
 
             ctx.beginPath();
             ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fillStyle = enemy.color; ctx.fill();
-            if (enemy.slowStacks > 0) { ctx.strokeStyle = 'rgba(0, 210, 255, 0.7)'; ctx.lineWidth = 2 + (enemy.slowStacks / 8); ctx.stroke();
-            }
+            if(enemy.type === 'final_boss') { ctx.lineWidth=2; ctx.strokeStyle='white'; ctx.stroke(); }
+            
+            if (enemy.slowStacks > 0) { ctx.strokeStyle = 'rgba(0, 210, 255, 0.7)'; ctx.lineWidth = 2 + (enemy.slowStacks / 8); ctx.stroke(); }
             
             ctx.fillStyle = 'white';
             ctx.font = (enemy.type === 'normal' ? 'bold 12px Arial' : 'bold 16px Arial'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -1719,6 +1861,12 @@ function animate() {
 
                 hp -= dmgToPlayer; updateUI();
                 if (activeRelics.thorns && dmgToPlayer > 0) triggerThorns(dmgToPlayer);
+                
+                // 近戰怪物攻擊後自爆死亡 (排除 Boss)
+                if (!MONSTER_DATA[enemy.type]?.isBoss && enemy.type !== 'ranged') {
+                    enemy.hp = 0;
+                }
+
                 if (hp <= 0) { state = 'GAMEOVER'; document.getElementById('bossUI').style.display = 'none'; document.getElementById('failWaveDisplay').innerText = currentWave; document.getElementById('sessionGold').innerText = sessionGold; if(isMultiplayer) leaveRoom(false); saveGameData(); showMenu('over'); }
             }
         } // end if-else frozenTimer
@@ -1731,17 +1879,10 @@ function animate() {
                 if (activeRelics.giantSlayer && MONSTER_DATA[enemy.type]?.isBoss) hitDmg *= 3;
                 enemy.hp -= hitDmg;
                 if ((sessionStats.explosionLvl || 0) > 0) {
-                    let blastRadius = 300 * sessionStats.explosionLvl;
-                    let blastDamage = bullet.originDmg * sessionStats.explosionLvl / 5;
-                    ctx.beginPath(); ctx.arc(bullet.x, bullet.y, blastRadius, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(255, 100, 0, 0.3)'; ctx.fill();
-                    enemies.forEach(otherE => {
-                        if (otherE !== enemy && Math.hypot(otherE.x - bullet.x, otherE.y - bullet.y) <= blastRadius + otherE.radius) {
-                            let splashDmg = blastDamage;
-                            if (activeRelics.giantSlayer && MONSTER_DATA[otherE.type]?.isBoss) splashDmg *= 3;
-                            otherE.hp -= splashDmg;
-                        }
-                    });
+                    let blastRadius = 150;
+                    let baseBlastDmg = bullet.originDmg * sessionStats.explosionLvl / 5;
+                    let chains = sessionStats.explosionLvl - 1;
+                    triggerChainExplosion(bullet.x, bullet.y, blastRadius, baseBlastDmg, chains, new Set([enemy]));
                 }
                 
                 bullets.splice(bIndex, 1);
@@ -1774,6 +1915,9 @@ function animate() {
         ctx.beginPath();
         ctx.arc(eb.x, eb.y, eb.radius, 0, Math.PI * 2);
         ctx.fillStyle = eb.color; ctx.shadowBlur = 10; ctx.shadowColor = eb.color; ctx.fill(); ctx.shadowBlur = 0;
+        
+        if (eb.color === '#000000') { ctx.lineWidth = 1.5; ctx.strokeStyle = 'white'; ctx.stroke(); }
+        
         if (eb.x < -200 || eb.x > canvas.width + 200 || eb.y < -200 || eb.y > canvas.height + 200) { enemyBullets.splice(i, 1); continue; }
 
         let dist = Math.hypot(player.x - eb.x, player.y - eb.y);
@@ -1799,8 +1943,10 @@ function animate() {
         }
     }
 
+    ctx.restore(); // Restore Zoom Camera
+
     if (frames % waveSpawnInterval === 0 && enemiesToSpawn.length > 0) { let type = enemiesToSpawn.shift(); spawnSpecificEnemy(type); }
-    if (enemiesToSpawn.length === 0 && enemies.length === 0 && hp > 0) { handleWaveClear(); return; }
+    if (enemiesToSpawn.length === 0 && enemies.length === 0 && hp > 0 && !relicPending) { handleWaveClear(); return; }
     
     if (shouldCheckLevelUp && sessionExp >= sessionMaxExp) { sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp(); }
     frames++;
@@ -1808,7 +1954,6 @@ function animate() {
 
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight; player.x = canvas.width / 2; player.y = canvas.height / 2;
-    enemies.forEach(enemy => { const newAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x); const speed = Math.hypot(enemy.velocity.x, enemy.velocity.y); enemy.velocity.x = Math.cos(newAngle) * speed; enemy.velocity.y = Math.sin(newAngle) * speed; });
 });
 checkLogin();
 if (currentUser) { loadGameData(); }
