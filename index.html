@@ -135,9 +135,10 @@
             幻影分身(R): <span id="phantomCooldownText" style="color:#ffeb3b; font-weight:bold;">—</span>
         </div>
         <div id="twinSkillDisplay" style="display:none; margin-top: 5px; font-size: 16px;">
-            幻影雙持(右鍵): <span id="twinCooldownText" style="color:#ffeb3b; font-weight:bold;">—</span>
+            幻影雙持(T): <span id="twinCooldownText" style="color:#ffeb3b; font-weight:bold;">—</span>
         </div>
         <button id="pauseBtn">暫停遊戲 (可開軍火庫)</button>
+        <button id="restartWaveHudBtn" style="margin-top:6px; padding:4px 10px; background:#ff9800; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">重新開始這波</button>
     </div>
 
 
@@ -266,10 +267,20 @@
                 <button id="toggleBossUIBtn" class="menu-btn victory-btn" style="min-width: 100px; padding: 8px;">開啟</button>
             </div>
             <div class="shop-item" style="width: 400px; justify-content: space-between;">
-                <span style="font-size: 20px;">畫面縮放</span>
+                <span style="font-size: 20px;">畫面縮放 (電腦滾輪)</span>
                 <span id="zoomValTxt" style="font-weight:bold; color:#00d2ff;">1.0</span>
             </div>
-            <p style="font-size: 15px; color: #aaa; max-width: 420px; text-align: center; margin: -10px 0 15px 0;">戰鬥中請用<strong>滑鼠滾輪</strong>調整縮放（已鎖定為僅滾輪，避免與準星換算衝突）。</p>
+            <p id="desktopZoomHint" style="font-size: 15px; color: #aaa; max-width: 420px; text-align: center; margin: -10px 0 15px 0;">戰鬥中請用<strong>滑鼠滾輪</strong>調整縮放。</p>
+            <div id="mobileZoomSection" class="shop-item" style="display:none; width: 400px; flex-direction: column; align-items: stretch; gap: 8px;">
+                <span style="font-size: 20px;">手機/平板畫面縮放</span>
+                <input type="range" id="mobileZoomSlider" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%;">
+                <span id="mobileZoomValTxt" style="font-weight:bold; color:#00d2ff; text-align:center;">1.0</span>
+            </div>
+            <div class="shop-item" style="width: 400px; flex-direction: column; align-items: stretch; gap: 8px;">
+                <span style="font-size: 20px;">代碼輸入區</span>
+                <input id="cheatCodeInput" type="text" placeholder="輸入代碼" style="padding: 10px; font-size: 16px; border-radius: 6px; border: 1px solid #666; background:#222; color:#fff;">
+                <button id="applyCheatCodeBtn" class="menu-btn" style="min-width: 120px; padding: 8px;">確認代碼</button>
+            </div>
             <br>
             <button id="closeSettingsBtn" class="menu-btn secondary-btn">返回</button>
         </div>
@@ -338,6 +349,7 @@
         <h1>遊戲暫停</h1>
         <div class="btn-group">
             <button id="resumeBtn" class="menu-btn">繼續戰鬥</button>
+            <button id="restartWaveBtn" class="menu-btn shop-btn">重新開始這波</button>
             <button id="toShopFromGameBtn" class="menu-btn shop-btn">開啟軍火庫</button>
             <button id="settingsBtnPause" class="menu-btn secondary-btn">⚙️ 設定</button>
             <button id="backToHomeFromPause" class="menu-btn danger-btn">放棄並返回主頁</button>
@@ -398,6 +410,13 @@
                         </div>
                         <button id="btn_shotgun" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 100px;" onclick="buyOrEquip('shotgun')">10000 金幣</button>
                     </div>
+                    <div class="shop-item" id="katanaShopItem" style="display:none;">
+                        <div class="shop-item-info">
+                            <span style="color:#8bc34a; font-weight:bold; font-size: 18px;">武士刀・蒼刃</span>
+                            <span style="color: #00d2ff; font-size: 14px;">⚔️ 傷害: 3.5 | 🔫 攻速: 3 次/秒 (劍氣)<br>💨 彈速: 15 | 右鍵: 反彈面前半徑100半圓內子彈(一次一顆)</span>
+                        </div>
+                        <button id="btn_katana" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 100px;" onclick="buyOrEquip('katana')">已解鎖</button>
+                    </div>
                 </div>
 
 
@@ -451,7 +470,7 @@
                     <div class="shop-item" id="shield2_container" style="display: none; width: 500px;">
                         <div class="shop-item-info" style="max-width: 320px;">
                             <span style="color:#ffeb3b; font-weight:bold; font-size: 20px;">幻影神盾 (雙持被動)</span>
-                            <span style="color:#ddd; margin-top: 5px;">由「上下左右」或「WASD」獨立旋轉操控。<br>➤ 平時僅在停火時防禦，點擊右鍵可強制雙持 5 秒 (冷卻 20 秒)<br>➤ 可與第一面盾牌同時存在<br>➤ <strong>取得方式：</strong>擊殺任一 Boss 有 <strong>10%</strong> 機率掉落（已取得後下方為分身技能強化）</span>
+                            <span style="color:#ddd; margin-top: 5px;">由「上下左右」或「WASD」獨立旋轉操控。<br>➤ 平時僅在停火時防禦，按 T 鍵可強制雙持 5 秒 (冷卻 20 秒)<br>➤ 可與第一面盾牌同時存在<br>➤ <strong>取得方式：</strong>擊殺任一 Boss 有 <strong>10%</strong> 機率掉落（已取得後下方為分身技能強化）</span>
                         </div>
                         <button id="btn_shield2" class="menu-btn" style="padding: 10px 15px; font-size: 18px; min-width: 160px;" onclick="buyShield2()" disabled>Boss 10% 掉落</button>
                     </div>
@@ -583,6 +602,9 @@ window.addEventListener('keydown', e => {
     if ((e.key === 'r' || e.key === 'R') && state === 'PLAYING') {
         triggerPhantomCloneSkill();
     }
+    if ((e.key === 't' || e.key === 'T') && state === 'PLAYING' && unlockedOffhands.includes('shield2')) {
+        if (canUseTwinSync()) { shield2SyncActive = true; shield2SyncTimer = 300; lastShield2SyncFrame = frames; }
+    }
 });
 window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
 window.addEventListener('contextmenu', e => { if (state === 'PLAYING') e.preventDefault(); });
@@ -598,129 +620,74 @@ canvas.addEventListener('wheel', e => {
 }, { passive: false });
 
 
-// ====== 手機多指控制邏輯優化 ======
+// ====== 手機搖桿（重寫：固定向量輸出，無平滑/加速） ======
 let touchAiming = false;
-let mobileAimX = 0; let mobileAimY = 0;
-
-
-const joyR = document.getElementById('joyRight');
-const knobR = document.getElementById('joyRightKnob');
-let joyRCenter = {x:0,y:0};
-let joyRTouchId = null;
-
-
-joyR.addEventListener('touchstart', e => {
-    e.preventDefault();
-    for(let touch of e.changedTouches) {
-        if (joyRTouchId === null) {
-            joyRTouchId = touch.identifier;
-            let rect = joyR.getBoundingClientRect();
-            joyRCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
-            updateJoyR(touch);
-            touchAiming = true;
-        }
-    }
-}, {passive: false});
-
-
-joyR.addEventListener('touchmove', e => {
-    e.preventDefault();
-    for(let touch of e.changedTouches) {
-        if (touch.identifier === joyRTouchId) {
-            updateJoyR(touch);
-        }
-    }
-}, {passive: false});
-
-
-joyR.addEventListener('touchend', endJoyR, {passive: false});
-joyR.addEventListener('touchcancel', endJoyR, {passive: false});
-
-
-function endJoyR(e) {
-    e.preventDefault();
-    for(let touch of e.changedTouches) {
-        if (touch.identifier === joyRTouchId) {
-            joyRTouchId = null;
-            touchAiming = false; 
-            knobR.style.transform = `translate(0px, 0px)`;
+let mobileAimX = 0;
+let mobileAimY = 0;
+const JOY_RADIUS = 40;
+const JOY_DEAD = 6;
+const JOY_AIM_LEN = 280;
+const joyState = {
+    left: { touchId: null, nx: 0, ny: 0, cx: 0, cy: 0 },
+    right: { touchId: null, nx: 0, ny: 0, cx: 0, cy: 0 }
+};
+function clampJoyVec(dx, dy) {
+    const dist = Math.hypot(dx, dy);
+    if (dist < JOY_DEAD) return { nx: 0, ny: 0, kx: 0, ky: 0 };
+    const clamped = Math.min(dist, JOY_RADIUS);
+    const nx = (dx / dist) * (clamped / JOY_RADIUS);
+    const ny = (dy / dist) * (clamped / JOY_RADIUS);
+    return { nx, ny, kx: nx * JOY_RADIUS, ky: ny * JOY_RADIUS };
+}
+function updateJoystickTouch(touch, side, knobEl) {
+    const st = joyState[side];
+    const v = clampJoyVec(touch.clientX - st.cx, touch.clientY - st.cy);
+    st.nx = v.nx;
+    st.ny = v.ny;
+    knobEl.style.transform = `translate(${v.kx}px, ${v.ky}px)`;
+    if (side === 'right') {
+        touchAiming = Math.hypot(v.nx, v.ny) > 0.01;
+        if (touchAiming) {
+            mobileAimX = player.x + v.nx * JOY_AIM_LEN;
+            mobileAimY = player.y + v.ny * JOY_AIM_LEN;
         }
     }
 }
-
-
-function updateJoyR(touch) {
-    let dx = touch.clientX - joyRCenter.x;
-    let dy = touch.clientY - joyRCenter.y;
-    let dist = Math.hypot(dx, dy);
-    if (dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
-    knobR.style.transform = `translate(${dx}px, ${dy}px)`;
-    const jc = clientToCanvasXY(joyRCenter.x, joyRCenter.y);
-    const tc = clientToCanvasXY(touch.clientX, touch.clientY);
-    const aimBoost = 9;
-    if (dist > 5) {
-        mobileAimX = canvas.width / 2 + (tc.x - jc.x) * aimBoost;
-        mobileAimY = canvas.height / 2 + (tc.y - jc.y) * aimBoost;
-    }
-}
-
-
-const joyL = document.getElementById('joyLeft');
-const knobL = document.getElementById('joyLeftKnob');
-let joyLCenter = {x:0,y:0};
-let joyLActive = false; let joyLDx = 0; let joyLDy = 0;
-let joyLRawDx = 0; let joyLRawDy = 0;
-let joyLTouchId = null;
-
-
-joyL.addEventListener('touchstart', e => {
-    e.preventDefault();
-    for(let touch of e.changedTouches) {
-        if (joyLTouchId === null) {
-            joyLTouchId = touch.identifier;
-            let rect = joyL.getBoundingClientRect();
-            joyLCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
-            updateJoyL(touch);
-            joyLActive = true;
+function bindJoystick(areaEl, knobEl, side) {
+    const st = joyState[side];
+    areaEl.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        for (const touch of e.changedTouches) {
+            if (st.touchId !== null) continue;
+            const rect = areaEl.getBoundingClientRect();
+            st.touchId = touch.identifier;
+            st.cx = rect.left + rect.width / 2;
+            st.cy = rect.top + rect.height / 2;
+            updateJoystickTouch(touch, side, knobEl);
         }
-    }
-}, {passive: false});
-
-
-joyL.addEventListener('touchmove', e => {
-    e.preventDefault();
-    for(let touch of e.changedTouches) {
-        if (touch.identifier === joyLTouchId) {
-            updateJoyL(touch);
+    }, { passive: false });
+    areaEl.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        for (const touch of e.changedTouches) {
+            if (touch.identifier === st.touchId) updateJoystickTouch(touch, side, knobEl);
         }
-    }
-}, {passive: false});
-
-
-joyL.addEventListener('touchend', endJoyL, {passive: false});
-joyL.addEventListener('touchcancel', endJoyL, {passive: false});
-
-
-function endJoyL(e) {
-    e.preventDefault();
-    for(let touch of e.changedTouches) {
-        if (touch.identifier === joyLTouchId) {
-            joyLTouchId = null;
-            joyLActive = false; joyLDx = 0; joyLDy = 0; joyLRawDx = 0; joyLRawDy = 0;
-            knobL.style.transform = `translate(0px, 0px)`;
+    }, { passive: false });
+    const release = (e) => {
+        e.preventDefault();
+        for (const touch of e.changedTouches) {
+            if (touch.identifier !== st.touchId) continue;
+            st.touchId = null;
+            st.nx = 0;
+            st.ny = 0;
+            knobEl.style.transform = 'translate(0px, 0px)';
+            if (side === 'right') touchAiming = false;
         }
-    }
+    };
+    areaEl.addEventListener('touchend', release, { passive: false });
+    areaEl.addEventListener('touchcancel', release, { passive: false });
 }
-
-
-function updateJoyL(touch) {
-    let dx = touch.clientX - joyLCenter.x;
-    let dy = touch.clientY - joyLCenter.y;
-    let dist = Math.hypot(dx, dy);
-    if (dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
-    knobL.style.transform = `translate(${dx}px, ${dy}px)`;
-    joyLRawDx = dx; joyLRawDy = dy;
-}
+bindJoystick(document.getElementById('joyLeft'), document.getElementById('joyLeftKnob'), 'left');
+bindJoystick(document.getElementById('joyRight'), document.getElementById('joyRightKnob'), 'right');
 
 
 document.getElementById('mobBtnSkill').addEventListener('touchstart', e => {
@@ -741,40 +708,6 @@ document.getElementById('mobBtnPhantom').addEventListener('touchstart', e => {
 }, {passive: false});
 
 
-document.addEventListener('touchend', (e) => {
-    for (let touch of e.changedTouches) {
-        if (touch.identifier === joyLTouchId) {
-            joyLTouchId = null;
-            joyLActive = false;
-            joyLDx = 0; joyLDy = 0; joyLRawDx = 0; joyLRawDy = 0;
-            const knobL = document.getElementById('joyLeftKnob');
-            if (knobL) knobL.style.transform = `translate(0px, 0px)`;
-        }
-        if (touch.identifier === joyRTouchId) {
-            joyRTouchId = null;
-            touchAiming = false;
-            const knobR = document.getElementById('joyRightKnob');
-            if (knobR) knobR.style.transform = `translate(0px, 0px)`;
-        }
-    }
-}, { passive: false });
-document.addEventListener('touchcancel', (e) => {
-    for (let touch of e.changedTouches) {
-        if (touch.identifier === joyLTouchId) {
-            joyLTouchId = null;
-            joyLActive = false;
-            joyLDx = 0; joyLDy = 0; joyLRawDx = 0; joyLRawDy = 0;
-            const knobL = document.getElementById('joyLeftKnob');
-            if (knobL) knobL.style.transform = `translate(0px, 0px)`;
-        }
-        if (touch.identifier === joyRTouchId) {
-            joyRTouchId = null;
-            touchAiming = false;
-            const knobR = document.getElementById('joyRightKnob');
-            if (knobR) knobR.style.transform = `translate(0px, 0px)`;
-        }
-    }
-}, { passive: false });
 
 
 function triggerShieldSkill() {
@@ -815,6 +748,50 @@ function getTwinCooldownRemainFrames() {
 
 function canUseTwinSync() {
     return frames - lastShield2SyncFrame >= getTwinCooldownFrames();
+}
+
+function reflectKatanaBullet() {
+    if (state !== 'PLAYING' || currentWeapon !== 'katana') return false;
+    const aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+    const katanaMod = sessionStats.weaponMods.katana || { reflectDmgMult: 1.0, reflectRadiusMult: 1.0 };
+    const reflectRadius = 100 * (katanaMod.reflectRadiusMult || 1.0);
+    let bestIndex = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < enemyBullets.length; i++) {
+        const eb = enemyBullets[i];
+        const d = Math.hypot(eb.x - player.x, eb.y - player.y);
+        if (d > reflectRadius) continue;
+        let a = Math.atan2(eb.y - player.y, eb.x - player.x) - aimAngle;
+        while (a > Math.PI) a -= Math.PI * 2;
+        while (a < -Math.PI) a += Math.PI * 2;
+        if (Math.abs(a) > Math.PI / 2) continue;
+        if (d < bestDist) { bestDist = d; bestIndex = i; }
+    }
+    if (bestIndex < 0) return false;
+    const eb = enemyBullets[bestIndex];
+    enemyBullets.splice(bestIndex, 1);
+
+    let outAngle = aimAngle;
+    let nearest = null, nd = Infinity;
+    enemies.forEach(en => {
+        if (en.hp <= 0) return;
+        const d = Math.hypot(en.x - player.x, en.y - player.y);
+        if (d < nd) { nd = d; nearest = en; }
+    });
+    if (nearest) outAngle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+
+    const baseDmg = Math.max(getSingleBulletDamage() * katanaMod.reflectDmgMult, eb.damage);
+    const speed = (WEAPONS.katana?.bulletSpeed || 15) * sessionStats.bulletSpeedMult;
+    bullets.push({
+        x: player.x + Math.cos(outAngle) * 35,
+        y: player.y + Math.sin(outAngle) * 35,
+        radius: 7,
+        color: WEAPONS.katana.color,
+        damage: baseDmg,
+        originDmg: baseDmg,
+        velocity: { x: Math.cos(outAngle) * speed, y: Math.sin(outAngle) * speed }
+    });
+    return true;
 }
 
 
@@ -1003,7 +980,8 @@ let enemyUidSeq = 1;
 const WEAPONS = {
     pistol: { cost: 0, name: '基礎手槍', fireRate: 20, damage: 1.5, bullets: 1, spread: 0, color: '#ffff00', fireMode: 'stream' },
     machineGun: { cost: 1000, name: '重型機關槍', fireRate: 12, damage: 1.0, bullets: 3, spread: 0.25, color: '#ffaa00', fireMode: 'stream' },
-    shotgun: { cost: 10000, name: '戰術散彈槍', fireRate: 45, damage: 2.5, bullets: 5, spread: 0.5, color: '#ff4444', fireMode: 'spread' }
+    shotgun: { cost: 10000, name: '戰術散彈槍', fireRate: 45, damage: 2.5, bullets: 5, spread: 0.5, color: '#ff4444', fireMode: 'spread' },
+    katana: { cost: 0, name: '武士刀・蒼刃', fireRate: 20, damage: 3.5, bullets: 1, spread: 0, bulletSpeed: 15, color: '#8bc34a', fireMode: 'stream' }
 };
 const OFFHANDS = { shield: { cost: 10000, name: '重裝塔盾' }, shield2: { cost: 50000, name: '幻影神盾' } };
 const FRAGMENT_GACHA_WEIGHTS = { pistol: 60, machineGun: 25, shotgun: 15 };
@@ -1014,7 +992,8 @@ const MONSTER_DATA = {
     'mini': { name: '巨型突變體', baseDamage: 2, baseHpMulti: 15, baseGold: 15, baseExp: 15, speed: 1.0, color: '#9c27b0', radius: 40, isBoss: true, spawnRule: '難度 1 以上 / 每 5 波出現一次', desc: '傷害公式：基礎傷害 * (擊殺數或1) * 難度<br>技能公式：半血時召喚 (難度 - 1) * 難度 / 2 隻小怪。<br>寒冰抗性：1% * 難度 * 單局被擊殺次數 / 2 (最高60%)' },
     'big': { name: '首領巨獸', baseDamage: 4, baseHpMulti: 50, baseGold: 80, baseExp: 80, speed: 0.4, color: '#e91e63', radius: 65, isBoss: true, spawnRule: '難度 1 以上 / 每 10 波出現一次', desc: '傷害公式：基礎傷害 * (擊殺數或1) * 難度<br>技能公式：半血時回復 1% * (難度 - 1) * 難度 / 2 的血量(可超過原本血量)，並每5秒發射一道雷射，傷害為 最終傷害 * (難度 - 1) * 難度 / 2。<br>寒冰抗性：1% * 難度 * 單局被擊殺次數 * 3' },
     'ranged': { name: '遠程射手', baseDamage: 1, baseHpMulti: 2, baseGold: 5, baseExp: 5, speed: 0.25, color: '#4caf50', radius: 25, spawnRule: '難度 2 以上 / 依波數機率突變(最高50%)', desc: '出現機率公式：1% * 難度 * 波數 / ((波數 + 5) / 波數)<br>傷害公式：基礎傷害 * 難度<br>難度二以上出現，每 3 秒發射酸液彈。<br>無特殊抗性' },
-    'final_boss': { name: '終焉領主', baseDamage: 7, baseHpMulti: 300, baseGold: 300, baseExp: 300, speed: 0.2, color: '#000000', radius: 80, isBoss: true, spawnRule: '難度 2 以上 / 第 30 波 (無盡模式 10% 替換首領)', desc: '傷害公式：基礎傷害 * (擊殺數或1) * 難度<br>技能公式：半血給予玩家試煉護盾，並每秒召喚 (難度 - 1) * 難度 / 2 顆子彈。<br>寒冰抗性：99% * 被擊殺次數 * 難度 (無上限)' }
+    'final_boss': { name: '終焉領主', baseDamage: 7, baseHpMulti: 300, baseGold: 300, baseExp: 300, speed: 0.2, color: '#000000', radius: 80, isBoss: true, spawnRule: '難度 2 以上 / 第 30 波 (無盡模式 10% 替換首領)', desc: '傷害公式：基礎傷害 * (擊殺數或1) * 難度<br>技能公式：半血給予玩家試煉護盾，並每秒召喚 (難度 - 1) * 難度 / 2 顆子彈。<br>寒冰抗性：99% * 被擊殺次數 * 難度 (無上限)' },
+    'meteor': { name: '流星', baseDamage: 0, baseHpMulti: 8, baseGold: 30, baseExp: 20, speed: 9.0, color: '#ff9800', radius: 22, isMeteor: true, spawnRule: '難度 6 以上 / 機率=難度/6 / 每波最多1隻', desc: '出現前會有警告。快速衝向玩家，命中造成玩家最大血量 20% 傷害，命中後消失。<br>機率公式：難度 / 6 (每波最多1隻)' }
 };
 
 
@@ -1024,7 +1003,8 @@ let myLastShotFrame = 0; let myNextShotFrame = 0;
 let sessionGold = 0; let bullets = []; let enemyBullets = [];
 let enemies = [];
 const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25, color: '#00d2ff' };
-let enemiesToSpawn = []; let waveSpawnInterval = 60; 
+let enemiesToSpawn = []; let waveSpawnInterval = 60; let waveLocalFrame = 0;
+let meteorWarningTimer = 0; let meteorSpawnedThisWave = false; 
 let sessionExp = 0; let sessionLevel = 1; let sessionMaxExp = 10;
 let sessionStats = {}; 
 let activeSlot = 'main'; 
@@ -1061,7 +1041,9 @@ const UPGRADE_POOL = [
     { id: 'w_machinegun_1', name: '機槍：穩定握把', desc: '機關槍降低散射', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.spreadReduction += 0.08; } },
     { id: 'w_machinegun_2', name: '機槍：過載引擎', desc: '機關槍射速獨立提升 30%', type: 'machineGun', rarity: '獨家', action: () => { sessionStats.weaponMods.machineGun.fireRateMult *= 0.70; } },
     { id: 'w_shotgun_1', name: '散彈：密集彈雨', desc: '散彈槍發射彈丸數量 * 1.5 (四捨五入)', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.bulletMult *= 1.5; } },
-    { id: 'w_shotgun_2', name: '散彈：龍息彈', desc: '散彈子彈速度+30%，傷害+20%', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.speedMult += 0.30; sessionStats.weaponMods.shotgun.dmgMult += 0.20; } }
+    { id: 'w_shotgun_2', name: '散彈：龍息彈', desc: '散彈子彈速度+30%，傷害+20%', type: 'shotgun', rarity: '獨家', action: () => { sessionStats.weaponMods.shotgun.speedMult += 0.30; sessionStats.weaponMods.shotgun.dmgMult += 0.20; } },
+    { id: 'w_katana_1', name: '武士刀：雙月劍氣', desc: '劍氣每次額外 +1 道', type: 'katana', rarity: '獨家', action: () => { sessionStats.weaponMods.katana.extraBullets += 1; } },
+    { id: 'w_katana_2', name: '武士刀：鏡返流', desc: '反彈傷害 +60%，反彈判定半徑 +30%', type: 'katana', rarity: '獨家', action: () => { sessionStats.weaponMods.katana.reflectDmgMult += 0.60; sessionStats.weaponMods.katana.reflectRadiusMult += 0.30; } }
 ];
 
 
@@ -1206,8 +1188,10 @@ window.addEventListener('mousemove', (e) => {
 
 window.addEventListener('mousedown', (e) => {
     if (state !== 'PLAYING' || isMobile) return;
-    if (e.button === 2 && unlockedOffhands.includes('shield2')) {
-        if (canUseTwinSync()) { shield2SyncActive = true; shield2SyncTimer = 300; lastShield2SyncFrame = frames; }
+    if (e.button === 2) {
+        if (currentWeapon === 'katana') {
+            reflectKatanaBullet();
+        }
     } else if (e.button === 0) {
         if (currentOffhand !== 'none') { activeSlot = (activeSlot === 'main') ? 'offhand' : 'main'; updateUI(); }
     }
@@ -1227,7 +1211,52 @@ function updateSettingsUI() {
     btn.className = settingShowBossUI ? "menu-btn victory-btn" : "menu-btn danger-btn";
     const zt = document.getElementById('zoomValTxt');
     if (zt) zt.innerText = gameZoom.toFixed(1);
+    const mzs = document.getElementById('mobileZoomSection');
+    const dzh = document.getElementById('desktopZoomHint');
+    if (mzs) mzs.style.display = isMobile ? 'flex' : 'none';
+    if (dzh) dzh.style.display = isMobile ? 'none' : 'block';
+    const msl = document.getElementById('mobileZoomSlider');
+    const mzt = document.getElementById('mobileZoomValTxt');
+    if (msl) { msl.value = gameZoom; }
+    if (mzt) mzt.innerText = gameZoom.toFixed(1);
 }
+function applyCheatCode666() {
+    Object.keys(WEAPONS).forEach(k => {
+        if (!unlockedWeapons.includes(k)) unlockedWeapons.push(k);
+        weaponStars[k] = 5;
+        const maxLvl = 10 + 5 * 5;
+        weaponUpgrades[k] = { dmgLvl: maxLvl, frLvl: maxLvl, hpLvl: maxLvl };
+    });
+    globalStats.fireRateLvl = 30;
+    globalStats.damageLvl = 30;
+    globalStats.hpLvl = 30;
+    globalStats.fireRateMult = Math.pow(0.92, 29);
+    globalStats.damageMult = 1 + 0.1 * 29;
+    globalStats.hpMult = 1 + 0.1 * 29;
+    shieldLvl = 10;
+    shield2SkillLvl = 10;
+    if (!unlockedOffhands.includes('shield')) unlockedOffhands.push('shield');
+    if (!unlockedOffhands.includes('shield2')) unlockedOffhands.push('shield2');
+    maxDifficultyUnlocked = Math.max(maxDifficultyUnlocked, 10);
+    gold = Math.max(gold, 999999);
+    gachaPoints = Math.max(gachaPoints, 99999);
+    saveGameData();
+    updateShopUI();
+    updateMainMenuDiffUI();
+    alert('代碼 666 已生效：全武器解鎖並升至滿級！');
+}
+document.getElementById('applyCheatCodeBtn').addEventListener('click', () => {
+    const code = document.getElementById('cheatCodeInput').value.trim();
+    if (code === '666') applyCheatCode666();
+    else alert('代碼錯誤');
+});
+document.getElementById('mobileZoomSlider').addEventListener('input', (e) => {
+    gameZoom = Math.max(0.5, Math.min(2.0, parseFloat(e.target.value) || 1.0));
+    const mzt = document.getElementById('mobileZoomValTxt');
+    const zt = document.getElementById('zoomValTxt');
+    if (mzt) mzt.innerText = gameZoom.toFixed(1);
+    if (zt) zt.innerText = gameZoom.toFixed(1);
+});
 document.getElementById('toggleBossUIBtn').addEventListener('click', () => { settingShowBossUI = !settingShowBossUI; updateSettingsUI(); saveGameData(); });
 function updateMainMenuDiffUI() {
     if (maxDifficultyUnlocked > 1) { document.getElementById('diffSelector').style.display = 'flex'; document.getElementById('diffDisplay').innerText = selectedDifficulty; }
@@ -1401,6 +1430,11 @@ function updateShopUI() {
     for (const [key, weapon] of Object.entries(WEAPONS)) {
         const btn = document.getElementById(`btn_${key}`);
         if (!btn) continue;
+        if (key === 'katana') {
+            const kItem = document.getElementById('katanaShopItem');
+            if (kItem) kItem.style.display = unlockedWeapons.includes('katana') ? 'flex' : 'none';
+            if (!unlockedWeapons.includes('katana')) continue;
+        }
         if (currentWeapon === key) { btn.innerText = "已裝備"; btn.disabled = true; btn.style.background = "#4caf50"; btn.style.color = "white"; } 
         else if (unlockedWeapons.includes(key)) {
             if (previousState === 'PAUSED') { btn.innerText = "戰鬥中鎖定"; btn.disabled = true; btn.style.background = "#666"; btn.style.color = "#ccc"; } 
@@ -1651,6 +1685,27 @@ document.getElementById('toShopBtn').addEventListener('click', () => openShop('M
 document.getElementById('toShopFromGameBtn').addEventListener('click', () => openShop('PAUSED'));
 document.getElementById('pauseBtn').addEventListener('click', () => { state = 'PAUSED'; saveGameData(); showMenu('pause'); });
 document.getElementById('resumeBtn').addEventListener('click', () => { state = 'PLAYING'; showMenu('playing'); startGameLoop(); });
+function restartCurrentWave() {
+    relicPending = false;
+    bullets = []; enemyBullets = []; enemies = [];
+    phantomClones = [];
+    meteorWarningTimer = 0;
+    meteorSpawnedThisWave = false;
+    playerHasTempShield = false;
+    document.getElementById('bossUI').style.display = 'none';
+    startWave();
+}
+function doRestartCurrentWave() {
+    state = 'PLAYING';
+    showMenu('playing');
+    restartCurrentWave();
+    startGameLoop();
+}
+document.getElementById('restartWaveBtn').addEventListener('click', doRestartCurrentWave);
+document.getElementById('restartWaveHudBtn').addEventListener('click', () => {
+    if (state !== 'PLAYING' && state !== 'PAUSED') return;
+    if (confirm('確定要重新開始目前這一波嗎？')) doRestartCurrentWave();
+});
 document.getElementById('backToHomeFromPause').addEventListener('click', () => { if(isMultiplayer) leaveRoom(false); state = 'MENU'; saveGameData(); showMenu('main'); });
 document.getElementById('restartBtn').addEventListener('click', () => { state = 'MENU'; showMenu('main'); });
 document.getElementById('clearSaveBtn').addEventListener('click', clearGameData);
@@ -1884,7 +1939,7 @@ function initGame() {
     
     bossKillsForRelic = 0; soulReaperKills = 0; relicPending = false;
     activeRelics = { demonPact: false, glassCannon: false, greedSkull: false, absoluteZero: false, thorns: false, giantSlayer: false, radiantAura: false, timeWarp: false, infiniteBandolier: false, soulReaper: false };
-    sessionStats = { damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, frostMagazineLevel: 0, weaponMods: { pistol: { extraBullets: 0, dmgMult: 1.0 }, machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0, bulletMult: 1.0 } } };
+    sessionStats = { damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, frostMagazineLevel: 0, weaponMods: { pistol: { extraBullets: 0, dmgMult: 1.0 }, machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0, bulletMult: 1.0 }, katana: { extraBullets: 0, reflectDmgMult: 1.0, reflectRadiusMult: 1.0 } } };
     bullets = []; enemyBullets = []; enemies = []; 
     
     mpOtherPlayersState = {};
@@ -1948,13 +2003,23 @@ function startWave() {
     else { let progress = Math.min(1, (currentWave - 30) / 70); let baseTime = 20 - (17 * progress); targetTimeSec = isBossWave ? baseTime * 1.5 : baseTime; targetTimeSec = Math.max(isBossWave ? 4.5 : 3, targetTimeSec); }
     let totalFramesAllowed = targetTimeSec * 60;
     if (enemiesToSpawn.length > 0) { waveSpawnInterval = Math.max(1, Math.floor(totalFramesAllowed / enemiesToSpawn.length)); } else { waveSpawnInterval = 60; }
-    
+    waveLocalFrame = 0;
+    meteorWarningTimer = 0;
+    meteorSpawnedThisWave = false;
+    if (selectedDifficulty >= 6 && Math.random() < selectedDifficulty / 6) {
+        meteorWarningTimer = 180;
+    }
     state = 'PLAYING'; showMenu('playing'); updateUI();
 }
 
 
 function handleWaveClear() {
     bullets = []; enemyBullets = []; playerHasTempShield = false; document.getElementById('bossUI').style.display = 'none';
+    if (isEndless && selectedDifficulty >= 3 && currentWave >= 100 && !unlockedWeapons.includes('katana')) {
+        unlockedWeapons.push('katana');
+        if (!weaponUpgrades.katana) weaponUpgrades.katana = { dmgLvl: 1, frLvl: 1, hpLvl: 1 };
+        alert("⚔️ 你在難度三以上無盡模式突破100波，解鎖【武士刀・蒼刃】！");
+    }
     if (currentWave === 30 && !isEndless) { 
         if (selectedDifficulty === maxDifficultyUnlocked) { maxDifficultyUnlocked++; document.getElementById('shopTabOffhandBtn').classList.remove('hidden'); }
         saveGameData(); state = 'VICTORY'; showMenu('victory');
@@ -2076,7 +2141,7 @@ function autoAimShoot(shooterKey, isMe, angle, currentWeap, isShooting) {
     let finalFireRate = weapon.fireRate; 
     let finalBullets = weapon.bullets; 
     let finalSpread = weapon.spread; 
-    let finalSpeed = 10;
+    let finalSpeed = weapon.bulletSpeed || 10;
     
     if (isMe) {
         weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0; 
@@ -2108,7 +2173,7 @@ function autoAimShoot(shooterKey, isMe, angle, currentWeap, isShooting) {
         let currentSpread = weapon.spread;
         if (currentSpread === 0 && finalBullets > 1) currentSpread = 0.15; 
         finalSpread = Math.max(0, currentSpread - (sessionStats.weaponMods[currentWeapon]?.spreadReduction || 0));
-        finalSpeed = 10 * sessionStats.bulletSpeedMult * weaponSpeedMult;
+        finalSpeed = (weapon.bulletSpeed || 10) * sessionStats.bulletSpeedMult * weaponSpeedMult;
     }
 
 
@@ -2171,8 +2236,13 @@ function spawnSpecificEnemy(type) {
 
 
     let eDamage = data.baseDamage;
-    if (data.isBoss) { eDamage = eDamage * Math.max(1, kills) * selectedDifficulty; } 
-    else { eDamage = eDamage * selectedDifficulty; }
+    if (type === 'meteor') {
+        eDamage = maxHp * 0.2;
+    } else if (data.isBoss) {
+        eDamage = eDamage * Math.max(1, kills) * selectedDifficulty;
+    } else {
+        eDamage = eDamage * selectedDifficulty;
+    }
     
     enemies.push({ uid: enemyUidSeq++, x, y, radius, color: data.color, hp: baseHp, maxHp: baseHp, goldValue: customGold, expValue: customExp, type, damage: eDamage, velocity: { x: Math.cos(angle) * data.speed, y: Math.sin(angle) * data.speed }, slowStacks: 0, frostRes: frostRes, skillTriggered: false, bulletTimer: 0, teleportTimer: 0, laserTimer: 0, shootTimer: 0, frozenTimer: 0 });
 }
@@ -2223,15 +2293,6 @@ function animate() {
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
 
-    if (isMobile && joyLActive) {
-        joyLDx += (joyLRawDx - joyLDx) * 0.42;
-        joyLDy += (joyLRawDy - joyLDy) * 0.42;
-    } else if (!joyLActive) {
-        joyLDx = 0;
-        joyLDy = 0;
-    }
-
-
     let tickRegen = 0.05 / 60;
     if ((sessionStats.okBandAidLvl || 0) > 1) { tickRegen += ((sessionStats.okBandAidLvl - 1) * 0.05) / 60; }
     if (hp < maxHp) {
@@ -2247,9 +2308,9 @@ function animate() {
     
     let curShieldAngle = tempShieldAngle;
     let curShopShieldAngle = shopShieldAngle;
-    if (isMobile && joyLActive) {
-        curShieldAngle = Math.atan2(joyLDy, joyLDx);
-        curShopShieldAngle = Math.atan2(joyLDy, joyLDx);
+    if (isMobile && joyState.left.touchId !== null && Math.hypot(joyState.left.nx, joyState.left.ny) > 0.01) {
+        curShieldAngle = Math.atan2(joyState.left.ny, joyState.left.nx);
+        curShopShieldAngle = curShieldAngle;
     } else {
         curShieldAngle = getAngleFromKeys(keys['w']||keys[tempUp]?'w':'w', keys['s']||keys[tempDown]?'s':'s', keys['a']||keys[tempLeft]?'a':'a', keys['d']||keys[tempRight]?'d':'d', tempShieldAngle);
         curShopShieldAngle = getAngleFromKeys('ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', shopShieldAngle);
@@ -2437,7 +2498,13 @@ function animate() {
             let frostSlowMult = Math.max(minSpeedMult, 1 - actualSlow); 
             let relicEnemySpeedMult = activeRelics.absoluteZero ? 0.7 : 1.0;
             let engagedByClone = false;
-            if (enemy.type !== 'ranged' && !MONSTER_DATA[enemy.type]?.isBoss && phantomClones.length > 0) {
+            if (enemy.type === 'meteor') {
+                const mAng = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                const mSpd = MONSTER_DATA.meteor.speed;
+                enemy.velocity.x = Math.cos(mAng) * mSpd;
+                enemy.velocity.y = Math.sin(mAng) * mSpd;
+            }
+            if (enemy.type !== 'ranged' && enemy.type !== 'meteor' && !MONSTER_DATA[enemy.type]?.isBoss && phantomClones.length > 0) {
                 for (let ci = 0; ci < phantomClones.length; ci++) {
                     const cl = phantomClones[ci];
                     if (Math.hypot(enemy.x - cl.x, enemy.y - cl.y) <= enemy.radius + cl.radius + 3) {
@@ -2531,8 +2598,14 @@ function animate() {
 
 
             ctx.beginPath();
+            if (enemy.type === 'meteor') {
+                ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 8, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 152, 0, 0.35)'; ctx.fill();
+            }
+            ctx.beginPath();
             ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fillStyle = enemy.color; ctx.fill();
             if(enemy.type === 'final_boss') { ctx.lineWidth=2; ctx.strokeStyle='white'; ctx.stroke(); }
+            if(enemy.type === 'meteor') { ctx.lineWidth=2; ctx.strokeStyle='#fff3e0'; ctx.stroke(); }
             
             if (enemy.slowStacks > 0) { ctx.strokeStyle = 'rgba(0, 210, 255, 0.7)'; ctx.lineWidth = 2 + (enemy.slowStacks / 8); ctx.stroke(); }
             
@@ -2550,7 +2623,7 @@ function animate() {
 
             const distToPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
             if (distToPlayer - enemy.radius - player.radius < 1) {
-                let dmgToPlayer = enemy.damage;
+                let dmgToPlayer = enemy.type === 'meteor' ? maxHp * 0.2 : enemy.damage;
                 let isBlocked = false;
                 
                 if (s1Active && isShieldBlocking(enemy, myAimAngle)) isBlocked = true;
@@ -2567,7 +2640,7 @@ function animate() {
                 if (activeRelics.thorns && dmgToPlayer > 0) triggerThorns(dmgToPlayer);
                 
                 // 近戰怪造成傷害後判定死亡 (Kamikaze)
-                if (!MONSTER_DATA[enemy.type]?.isBoss && enemy.type !== 'ranged') {
+                if (enemy.type === 'meteor' || (!MONSTER_DATA[enemy.type]?.isBoss && enemy.type !== 'ranged')) {
                     enemy.hp = 0;
                 }
 
@@ -2673,8 +2746,32 @@ function animate() {
     ctx.restore(); // Restore Zoom Camera
 
 
-    if (frames % waveSpawnInterval === 0 && enemiesToSpawn.length > 0) { let type = enemiesToSpawn.shift(); spawnSpecificEnemy(type); }
-    if (enemiesToSpawn.length === 0 && enemies.length === 0 && hp > 0 && !relicPending) { handleWaveClear(); return; }
+    if (meteorWarningTimer > 0) {
+        meteorWarningTimer--;
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = 'rgba(255, 87, 34, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, 90);
+        ctx.fillStyle = '#ff5722';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const warnSec = Math.max(1, Math.ceil(meteorWarningTimer / 60));
+        ctx.fillText(`⚠️ 流星來襲！${warnSec} 秒`, canvas.width / 2, 45);
+        ctx.restore();
+        if (meteorWarningTimer === 0 && !meteorSpawnedThisWave) {
+            spawnSpecificEnemy('meteor');
+            meteorSpawnedThisWave = true;
+        }
+    }
+
+
+    waveLocalFrame++;
+    if (enemiesToSpawn.length > 0 && waveLocalFrame % waveSpawnInterval === 0) {
+        spawnSpecificEnemy(enemiesToSpawn.shift());
+    }
+    const waveEnemyPending = enemiesToSpawn.length > 0 || enemies.length > 0 || meteorWarningTimer > 0;
+    if (!waveEnemyPending && hp > 0 && !relicPending) { handleWaveClear(); return; }
     
     if (shouldCheckLevelUp && sessionExp >= sessionMaxExp) { sessionExp -= sessionMaxExp; sessionLevel++; sessionMaxExp = Math.floor(sessionMaxExp * 1.5); triggerLevelUp(); }
     frames++;
@@ -2691,3 +2788,4 @@ if (currentUser) { loadGameData(); }
 </script>
 </body>
 </html>
+
