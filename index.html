@@ -241,7 +241,7 @@
             <p style="font-size: 18px; color: #ddd; max-width: 600px; line-height: 1.5;">
                 在難度二以上擊殺怪物可累積【抽獎點】。<br>
                 消耗點數抽取武器碎片，用於「軍火庫」中提升武器星級！<br>
-                <span style="font-size: 14px; color: #aaa;">（僅能抽到已解鎖的武器碎片；手槍 60%、機槍 25%、散彈 15%，會在你已解鎖的武器間自動分配比例）</span>
+                <span style="font-size: 14px; color: #aaa;">（僅能抽到已解鎖的武器碎片；武士刀碎片固定 1%，其餘已解鎖武器依 手槍60% / 機槍25% / 散彈15% 分配剩餘 99%）</span>
             </p>
             <div style="font-size: 26px; color: #00d2ff; font-weight: bold; margin-bottom: 20px;">
                 目前抽獎點數: <span id="gachaPointsDisplay">0</span>
@@ -413,7 +413,7 @@
                     <div class="shop-item" id="katanaShopItem" style="display:none;">
                         <div class="shop-item-info">
                             <span style="color:#8bc34a; font-weight:bold; font-size: 18px;">武士刀・蒼刃</span>
-                            <span style="color: #00d2ff; font-size: 14px;">⚔️ 傷害: 3.5 | 🔫 攻速: 3 次/秒 (劍氣)<br>💨 彈速: 15 | 右鍵: 反彈面前半徑100半圓內子彈(一次一顆)</span>
+                            <span style="color: #00d2ff; font-size: 14px;">⚔️ 傷害: 6 | 🔫 攻速: 3 次/秒 (橫向穿透劍氣)<br>💨 彈速: 15 | 右鍵: 反彈面前半徑100半圓內子彈(一次一顆)</span>
                         </div>
                         <button id="btn_katana" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 100px;" onclick="buyOrEquip('katana')">已解鎖</button>
                     </div>
@@ -753,7 +753,8 @@ function canUseTwinSync() {
 function reflectKatanaBullet() {
     if (state !== 'PLAYING' || currentWeapon !== 'katana') return false;
     const aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
-    const katanaMod = sessionStats.weaponMods.katana || { reflectDmgMult: 1.0, reflectRadiusMult: 1.0 };
+    ensureSessionStats();
+    const katanaMod = sessionStats.weaponMods?.katana || { reflectDmgMult: 1.0, reflectRadiusMult: 1.0 };
     const reflectRadius = 100 * (katanaMod.reflectRadiusMult || 1.0);
     let bestIndex = -1;
     let bestDist = Infinity;
@@ -782,16 +783,81 @@ function reflectKatanaBullet() {
 
     const baseDmg = Math.max(getSingleBulletDamage() * katanaMod.reflectDmgMult, eb.damage);
     const speed = (WEAPONS.katana?.bulletSpeed || 15) * sessionStats.bulletSpeedMult;
-    bullets.push({
-        x: player.x + Math.cos(outAngle) * 35,
-        y: player.y + Math.sin(outAngle) * 35,
-        radius: 7,
-        color: WEAPONS.katana.color,
-        damage: baseDmg,
-        originDmg: baseDmg,
-        velocity: { x: Math.cos(outAngle) * speed, y: Math.sin(outAngle) * speed }
-    });
+    pushKatanaSwordQi(player.x + Math.cos(outAngle) * 35, player.y + Math.sin(outAngle) * 35, outAngle, speed, baseDmg);
     return true;
+}
+
+
+function pushKatanaSwordQi(x, y, angle, speed, damage) {
+    bullets.push({
+        x, y,
+        radius: 14,
+        isSwordQi: true,
+        pierce: true,
+        qiScale: 1.0,
+        hitEnemyUids: new Set(),
+        color: WEAPONS.katana.color,
+        damage,
+        originDmg: damage,
+        velocity: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed }
+    });
+}
+
+
+function swordQiHitsEnemy(bullet, enemy) {
+    const ang = Math.atan2(bullet.velocity.y, bullet.velocity.x);
+    const cx = bullet.x + Math.cos(ang) * 14;
+    const cy = bullet.y + Math.sin(ang) * 14;
+    const dx = enemy.x - cx;
+    const dy = enemy.y - cy;
+    const lx = dx * Math.cos(ang) + dy * Math.sin(ang);
+    const ly = -dx * Math.sin(ang) + dy * Math.cos(ang);
+    return lx >= -8 && lx <= 28 + enemy.radius * 0.35 && Math.abs(ly) <= 30 + enemy.radius;
+}
+
+
+function drawSwordQi(ctx, bullet) {
+    const ang = Math.atan2(bullet.velocity.y, bullet.velocity.x);
+    const arcR = 28;
+    const arcCx = -6;
+    const arcStart = -Math.PI * 0.47;
+    const arcEnd = Math.PI * 0.47;
+
+    ctx.save();
+    ctx.translate(bullet.x, bullet.y);
+    ctx.rotate(ang);
+    ctx.lineCap = 'round';
+
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = '#80deea';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-30, -5);
+    ctx.lineTo(-44, -5);
+    ctx.moveTo(-30, 5);
+    ctx.lineTo(-42, 5);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    ctx.beginPath();
+    ctx.arc(arcCx, 0, arcR, arcStart, arcEnd, false);
+    ctx.strokeStyle = 'rgba(0, 200, 255, 0.35)';
+    ctx.lineWidth = 18;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(arcCx, 0, arcR, arcStart + 0.05, arcEnd - 0.05, false);
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = 11;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(arcCx, 0, arcR, arcStart + 0.08, arcEnd - 0.08, false);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.restore();
 }
 
 
@@ -981,10 +1047,11 @@ const WEAPONS = {
     pistol: { cost: 0, name: '基礎手槍', fireRate: 20, damage: 1.5, bullets: 1, spread: 0, color: '#ffff00', fireMode: 'stream' },
     machineGun: { cost: 1000, name: '重型機關槍', fireRate: 12, damage: 1.0, bullets: 3, spread: 0.25, color: '#ffaa00', fireMode: 'stream' },
     shotgun: { cost: 10000, name: '戰術散彈槍', fireRate: 45, damage: 2.5, bullets: 5, spread: 0.5, color: '#ff4444', fireMode: 'spread' },
-    katana: { cost: 0, name: '武士刀・蒼刃', fireRate: 20, damage: 3.5, bullets: 1, spread: 0, bulletSpeed: 15, color: '#8bc34a', fireMode: 'stream' }
+    katana: { cost: 0, name: '武士刀・蒼刃', fireRate: 20, damage: 6, bullets: 1, spread: 0, bulletSpeed: 15, color: '#00e5ff', fireMode: 'stream' }
 };
 const OFFHANDS = { shield: { cost: 10000, name: '重裝塔盾' }, shield2: { cost: 50000, name: '幻影神盾' } };
 const FRAGMENT_GACHA_WEIGHTS = { pistol: 60, machineGun: 25, shotgun: 15 };
+const KATANA_FRAGMENT_RATE = 0.01;
 
 
 const MONSTER_DATA = {
@@ -993,7 +1060,8 @@ const MONSTER_DATA = {
     'big': { name: '首領巨獸', baseDamage: 4, baseHpMulti: 50, baseGold: 80, baseExp: 80, speed: 0.4, color: '#e91e63', radius: 65, isBoss: true, spawnRule: '難度 1 以上 / 每 10 波出現一次', desc: '傷害公式：基礎傷害 * (擊殺數或1) * 難度<br>技能公式：半血時回復 1% * (難度 - 1) * 難度 / 2 的血量(可超過原本血量)，並每5秒發射一道雷射，傷害為 最終傷害 * (難度 - 1) * 難度 / 2。<br>寒冰抗性：1% * 難度 * 單局被擊殺次數 * 3' },
     'ranged': { name: '遠程射手', baseDamage: 1, baseHpMulti: 2, baseGold: 5, baseExp: 5, speed: 0.25, color: '#4caf50', radius: 25, spawnRule: '難度 2 以上 / 依波數機率突變(最高50%)', desc: '出現機率公式：1% * 難度 * 波數 / ((波數 + 5) / 波數)<br>傷害公式：基礎傷害 * 難度<br>難度二以上出現，每 3 秒發射酸液彈。<br>無特殊抗性' },
     'final_boss': { name: '終焉領主', baseDamage: 7, baseHpMulti: 300, baseGold: 300, baseExp: 300, speed: 0.2, color: '#000000', radius: 80, isBoss: true, spawnRule: '難度 2 以上 / 第 30 波 (無盡模式 10% 替換首領)', desc: '傷害公式：基礎傷害 * (擊殺數或1) * 難度<br>技能公式：半血給予玩家試煉護盾，並每秒召喚 (難度 - 1) * 難度 / 2 顆子彈。<br>寒冰抗性：99% * 被擊殺次數 * 難度 (無上限)' },
-    'meteor': { name: '流星', baseDamage: 0, baseHpMulti: 8, baseGold: 30, baseExp: 20, speed: 9.0, color: '#ff9800', radius: 22, isMeteor: true, spawnRule: '難度 6 以上 / 機率=難度/6 / 每波最多1隻', desc: '出現前會有警告。快速衝向玩家，命中造成玩家最大血量 20% 傷害，命中後消失。<br>機率公式：難度 / 6 (每波最多1隻)' }
+    'meteor': { name: '流星', baseDamage: 0, baseHpMulti: 8, baseGold: 30, baseExp: 20, speed: 9.0, color: '#ff9800', radius: 22, isMeteor: true, spawnRule: '難度 6 以上 / 機率=難度/6% / 每波最多1隻', desc: '出現前會有警告。快速衝向玩家，命中造成玩家最大血量 20% 傷害，命中後消失。<br>機率公式：難度 / 6 % (每波最多1隻)<br>出現時 10% 機率額外召喚小行星' },
+    'asteroid': { name: '小行星', baseDamage: 0, baseHpMulti: 16, baseGold: 45, baseExp: 30, speed: 7.2, color: '#795548', radius: 28, isAsteroid: true, spawnRule: '流星出現時 10% 機率伴隨召喚', desc: '由流星伴隨召喚。血量=流星2倍、速度=流星0.8倍、傷害=流星2倍。<br>快速衝向玩家，命中後消失。' }
 };
 
 
@@ -1006,7 +1074,33 @@ const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 25, color: '
 let enemiesToSpawn = []; let waveSpawnInterval = 60; let waveLocalFrame = 0;
 let meteorWarningTimer = 0; let meteorSpawnedThisWave = false; 
 let sessionExp = 0; let sessionLevel = 1; let sessionMaxExp = 10;
-let sessionStats = {}; 
+function getDefaultSessionStats() {
+    return {
+        damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0,
+        enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, frostMagazineLevel: 0,
+        weaponMods: {
+            pistol: { extraBullets: 0, dmgMult: 1.0 },
+            machineGun: { spreadReduction: 0, fireRateMult: 1.0 },
+            shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0, bulletMult: 1.0 },
+            katana: { extraBullets: 0, reflectDmgMult: 1.0, reflectRadiusMult: 1.0 }
+        }
+    };
+}
+function ensureSessionStats() {
+    if (!sessionStats || typeof sessionStats !== 'object') sessionStats = getDefaultSessionStats();
+    if (!sessionStats.weaponMods) sessionStats.weaponMods = getDefaultSessionStats().weaponMods;
+    const defaults = getDefaultSessionStats().weaponMods;
+    Object.keys(defaults).forEach(k => {
+        if (!sessionStats.weaponMods[k]) sessionStats.weaponMods[k] = { ...defaults[k] };
+    });
+    if (sessionStats.damageMult == null) sessionStats.damageMult = 1.0;
+    if (sessionStats.fireRateMult == null) sessionStats.fireRateMult = 1.0;
+    if (sessionStats.bulletSpeedMult == null) sessionStats.bulletSpeedMult = 1.0;
+    if (sessionStats.extraBulletsGlobal == null) sessionStats.extraBulletsGlobal = 0;
+    if (sessionStats.enemySpeedMult == null) sessionStats.enemySpeedMult = 1.0;
+    if (sessionStats.goldBonus == null) sessionStats.goldBonus = 1.0;
+}
+let sessionStats = getDefaultSessionStats();
 let activeSlot = 'main'; 
 
 
@@ -1108,6 +1202,7 @@ async function loadGameData() {
             document.getElementById('mobBtnTwin').style.display = 'block';
             document.getElementById('mobBtnPhantom').style.display = shield2SkillLvl >= 2 ? 'block' : 'none';
         }
+        ensureSessionStats();
         updateMainMenuDiffUI(); updateUI(); updateSettingsUI();
     }
 }
@@ -1288,8 +1383,9 @@ function calculateWeaponUpgradeCost(baseCost, towerCost, level) {
 
 
 function getSingleBulletDamage() {
+    ensureSessionStats();
     const weapon = WEAPONS[currentWeapon]; 
-    let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0;
+    let weaponDmgMult = sessionStats.weaponMods?.[currentWeapon]?.dmgMult || 1.0;
     const wUpg = weaponUpgrades[currentWeapon] || {dmgLvl: 1, frLvl: 1};
     let star = weaponStars[currentWeapon] || 0;
     const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1)); 
@@ -1305,10 +1401,11 @@ function getSingleBulletDamage() {
 
 
 function getPlayerDPS() {
+    ensureSessionStats();
     const weapon = WEAPONS[currentWeapon];
-    let weaponDmgMult = sessionStats.weaponMods[currentWeapon]?.dmgMult || 1.0;
-    let weaponFrMult = sessionStats.weaponMods[currentWeapon]?.fireRateMult || 1.0;
-    let weaponSpeedMult = sessionStats.weaponMods[currentWeapon]?.speedMult || 1.0;
+    let weaponDmgMult = sessionStats.weaponMods?.[currentWeapon]?.dmgMult || 1.0;
+    let weaponFrMult = sessionStats.weaponMods?.[currentWeapon]?.fireRateMult || 1.0;
+    let weaponSpeedMult = sessionStats.weaponMods?.[currentWeapon]?.speedMult || 1.0;
     const wUpg = weaponUpgrades[currentWeapon] || { dmgLvl: 1, frLvl: 1, hpLvl: 1 };
     let star = weaponStars[currentWeapon] || 0;
     const wDmgBonus = 1 + (0.10 * (wUpg.dmgLvl - 1));
@@ -1326,11 +1423,11 @@ function getPlayerDPS() {
     if (activeRelics.glassCannon) finalFireRate = Math.max(1, Math.floor(finalFireRate * 0.7));
 
 
-    let baseBullets = weapon.bullets + (sessionStats.weaponMods[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal;
+    let baseBullets = weapon.bullets + (sessionStats.weaponMods?.[currentWeapon]?.extraBullets || 0) + sessionStats.extraBulletsGlobal;
     if (activeRelics.glassCannon) baseBullets += 2;
 
 
-    let bulletMult = sessionStats.weaponMods[currentWeapon]?.bulletMult || 1.0;
+    let bulletMult = sessionStats.weaponMods?.[currentWeapon]?.bulletMult || 1.0;
     let finalBullets = Math.max(1, Math.round(baseBullets * bulletMult));
 
 
@@ -1636,20 +1733,27 @@ function updateGachaUI() {
     document.getElementById('drawGachaBtn').disabled = gachaPoints < cost;
 
 
-    let pool = unlockedWeapons;
-    let weights = pool.map(w => FRAGMENT_GACHA_WEIGHTS[w] || 0);
-    let totalWeight = weights.reduce((a, b) => a + b, 0);
-    if (totalWeight <= 0) {
-        weights = pool.map(() => 1);
-        totalWeight = weights.length;
+    const hasKatana = unlockedWeapons.includes('katana');
+    const otherPool = unlockedWeapons.filter(w => w !== 'katana');
+    let otherWeights = otherPool.map(w => FRAGMENT_GACHA_WEIGHTS[w] || 0);
+    let otherTotal = otherWeights.reduce((a, b) => a + b, 0);
+    if (otherTotal <= 0 && otherPool.length > 0) {
+        otherWeights = otherPool.map(() => 1);
+        otherTotal = otherWeights.length;
     }
+    const remainRate = hasKatana ? (1 - KATANA_FRAGMENT_RATE) : 1;
 
 
     let fragHtml = '';
-    unlockedWeapons.forEach((w, index) => {
+    unlockedWeapons.forEach((w) => {
         let count = weaponFragments[w] || 0;
         let star = weaponStars[w] || 0;
-        let prob = ((weights[index] / totalWeight) * 100).toFixed(1);
+        let prob;
+        if (w === 'katana') prob = (KATANA_FRAGMENT_RATE * 100).toFixed(1);
+        else {
+            const idx = otherPool.indexOf(w);
+            prob = otherTotal > 0 ? ((otherWeights[idx] / otherTotal) * remainRate * 100).toFixed(1) : '0.0';
+        }
         fragHtml += `<div class="fragment-item"><span>${WEAPONS[w].name}</span><small>碎片: ${count} | 星級: ${star}<br>抽取機率: ${prob}%</small></div>`;
     });
     document.getElementById('fragmentsList').innerHTML = fragHtml || '<p style="color:#aaa;">還沒有解鎖任何武器</p>';
@@ -1660,19 +1764,27 @@ document.getElementById('drawGachaBtn').addEventListener('click', () => {
     if (unlockedWeapons.length === 0) return alert("請先解鎖武器！");
     
     gachaPoints -= cost; totalDraws++;
-    let pool = unlockedWeapons;
-    let weights = pool.map(w => FRAGMENT_GACHA_WEIGHTS[w] || 0);
-    let totalWeight = weights.reduce((a, b) => a + b, 0);
-    if (totalWeight <= 0) {
-        weights = pool.map(() => 1);
-        totalWeight = weights.length;
-    }
-
-
-    let rand = Math.random() * totalWeight; let current = 0; let selected = pool[0];
-    for (let i = 0; i < pool.length; i++) {
-        current += weights[i];
-        if (rand <= current) { selected = pool[i]; break; }
+    let selected = unlockedWeapons[0];
+    if (unlockedWeapons.includes('katana') && Math.random() < KATANA_FRAGMENT_RATE) {
+        selected = 'katana';
+    } else {
+        let pool = unlockedWeapons.filter(w => w !== 'katana');
+        if (pool.length === 0) selected = 'katana';
+        else {
+            let weights = pool.map(w => FRAGMENT_GACHA_WEIGHTS[w] || 0);
+            let totalWeight = weights.reduce((a, b) => a + b, 0);
+            if (totalWeight <= 0) {
+                weights = pool.map(() => 1);
+                totalWeight = weights.length;
+            }
+            let rand = Math.random() * totalWeight;
+            let current = 0;
+            selected = pool[0];
+            for (let i = 0; i < pool.length; i++) {
+                current += weights[i];
+                if (rand <= current) { selected = pool[i]; break; }
+            }
+        }
     }
     weaponFragments[selected] = (weaponFragments[selected] || 0) + 1;
     saveGameData(); updateGachaUI(); alert(`🎉 恭喜抽中【${WEAPONS[selected].name}】碎片 x1！`);
@@ -1939,7 +2051,7 @@ function initGame() {
     
     bossKillsForRelic = 0; soulReaperKills = 0; relicPending = false;
     activeRelics = { demonPact: false, glassCannon: false, greedSkull: false, absoluteZero: false, thorns: false, giantSlayer: false, radiantAura: false, timeWarp: false, infiniteBandolier: false, soulReaper: false };
-    sessionStats = { damageMult: 1.0, fireRateMult: 1.0, bulletSpeedMult: 1.0, extraBulletsGlobal: 0, enemySpeedMult: 1.0, goldBonus: 1.0, exclusivePicks: 0, frostMagazineLevel: 0, weaponMods: { pistol: { extraBullets: 0, dmgMult: 1.0 }, machineGun: { spreadReduction: 0, fireRateMult: 1.0 }, shotgun: { extraBullets: 0, speedMult: 1.0, dmgMult: 1.0, bulletMult: 1.0 }, katana: { extraBullets: 0, reflectDmgMult: 1.0, reflectRadiusMult: 1.0 } } };
+    sessionStats = getDefaultSessionStats();
     bullets = []; enemyBullets = []; enemies = []; 
     
     mpOtherPlayersState = {};
@@ -2006,7 +2118,7 @@ function startWave() {
     waveLocalFrame = 0;
     meteorWarningTimer = 0;
     meteorSpawnedThisWave = false;
-    if (selectedDifficulty >= 6 && Math.random() < selectedDifficulty / 6) {
+    if (selectedDifficulty >= 6 && Math.random() < selectedDifficulty / 600) {
         meteorWarningTimer = 180;
     }
     state = 'PLAYING'; showMenu('playing'); updateUI();
@@ -2186,7 +2298,8 @@ function autoAimShoot(shooterKey, isMe, angle, currentWeap, isShooting) {
         const averageInterval = Math.max(1, Math.floor(finalFireRate / finalBullets));
         if (frames >= stateRef.nextShotFrame) {
             const randomScatterAngle = angle + (Math.random() - 0.5) * finalSpread;
-            bullets.push({ x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, originDmg: finalDamage, velocity: { x: Math.cos(randomScatterAngle) * finalSpeed, y: Math.sin(randomScatterAngle) * finalSpeed } });
+            if (currentWeap === 'katana') pushKatanaSwordQi(player.x, player.y, randomScatterAngle, finalSpeed, finalDamage);
+            else bullets.push({ x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, originDmg: finalDamage, velocity: { x: Math.cos(randomScatterAngle) * finalSpeed, y: Math.sin(randomScatterAngle) * finalSpeed } });
             stateRef.nextShotFrame = frames + averageInterval;
         }
     } else {
@@ -2194,7 +2307,8 @@ function autoAimShoot(shooterKey, isMe, angle, currentWeap, isShooting) {
             for (let i = 0; i < finalBullets; i++) { 
                 let fireAngle = angle;
                 if (finalSpread > 0) fireAngle += (Math.random() - 0.5) * finalSpread;
-                bullets.push({ x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, originDmg: finalDamage, velocity: { x: Math.cos(fireAngle) * finalSpeed, y: Math.sin(fireAngle) * finalSpeed } });
+                if (currentWeap === 'katana') pushKatanaSwordQi(player.x, player.y, fireAngle, finalSpeed, finalDamage);
+                else bullets.push({ x: player.x, y: player.y, radius: 6, color: weapon.color, damage: finalDamage, originDmg: finalDamage, velocity: { x: Math.cos(fireAngle) * finalSpeed, y: Math.sin(fireAngle) * finalSpeed } });
             }
             stateRef.lastShotFrame = frames;
         }
@@ -2245,6 +2359,36 @@ function spawnSpecificEnemy(type) {
     }
     
     enemies.push({ uid: enemyUidSeq++, x, y, radius, color: data.color, hp: baseHp, maxHp: baseHp, goldValue: customGold, expValue: customExp, type, damage: eDamage, velocity: { x: Math.cos(angle) * data.speed, y: Math.sin(angle) * data.speed }, slowStacks: 0, frostRes: frostRes, skillTriggered: false, bulletTimer: 0, teleportTimer: 0, laserTimer: 0, shootTimer: 0, frozenTimer: 0 });
+}
+
+
+function spawnAsteroidFromMeteor(meteorEnemy) {
+    const data = MONSTER_DATA.asteroid;
+    let x = meteorEnemy.x + (Math.random() - 0.5) * 140;
+    let y = meteorEnemy.y + (Math.random() - 0.5) * 140;
+    x = Math.max(data.radius, Math.min(canvas.width - data.radius, x));
+    y = Math.max(data.radius, Math.min(canvas.height - data.radius, y));
+    const angle = Math.atan2(player.y - y, player.x - x);
+    const speed = MONSTER_DATA.meteor.speed * 0.8;
+    const baseHp = meteorEnemy.maxHp * 2;
+    const eDamage = meteorEnemy.damage * 2;
+    const customGold = Math.max(1, Math.floor(meteorEnemy.goldValue * 1.5));
+    const customExp = Math.max(1, Math.floor(meteorEnemy.expValue * 1.5));
+    enemies.push({
+        uid: enemyUidSeq++, x, y, radius: data.radius, color: data.color,
+        hp: baseHp, maxHp: baseHp, goldValue: customGold, expValue: customExp,
+        type: 'asteroid', damage: eDamage,
+        velocity: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
+        slowStacks: 0, frostRes: 0, skillTriggered: false,
+        bulletTimer: 0, teleportTimer: 0, laserTimer: 0, shootTimer: 0, frozenTimer: 0
+    });
+}
+
+
+function spawnMeteorWithExtras() {
+    spawnSpecificEnemy('meteor');
+    const meteor = enemies[enemies.length - 1];
+    if (Math.random() < 0.1) spawnAsteroidFromMeteor(meteor);
 }
 
 
@@ -2395,7 +2539,7 @@ function animate() {
         let bullet = bullets[bIndex];
         let nearestEnemy = null; let minDist = 150; 
         enemies.forEach(enemy => { let dist = Math.hypot(enemy.x - bullet.x, enemy.y - bullet.y); if (dist < minDist) { minDist = dist; nearestEnemy = enemy; } });
-        if (nearestEnemy) {
+        if (!bullet.isSwordQi && nearestEnemy) {
             const targetAngle = Math.atan2(nearestEnemy.y - bullet.y, nearestEnemy.x - bullet.x);
             const currentAngle = Math.atan2(bullet.velocity.y, bullet.velocity.x); let angleDiff = targetAngle - currentAngle; while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
             while (angleDiff < -Math.PI) angleDiff += Math.PI * 2; const turnSpeed = 0.015;
@@ -2403,8 +2547,8 @@ function animate() {
             bullet.velocity.y = Math.sin(newAngle) * speed;
         }
         bullet.x += bullet.velocity.x; bullet.y += bullet.velocity.y;
-        ctx.beginPath();
-        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); ctx.fillStyle = bullet.color; ctx.fill();
+        if (bullet.isSwordQi) drawSwordQi(ctx, bullet);
+        else { ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); ctx.fillStyle = bullet.color; ctx.fill(); }
         if (bullet.x < -100 || bullet.x > canvas.width + 100 || bullet.y < -100 || bullet.y > canvas.height + 100) bullets.splice(bIndex, 1);
     }
 
@@ -2498,13 +2642,13 @@ function animate() {
             let frostSlowMult = Math.max(minSpeedMult, 1 - actualSlow); 
             let relicEnemySpeedMult = activeRelics.absoluteZero ? 0.7 : 1.0;
             let engagedByClone = false;
-            if (enemy.type === 'meteor') {
+            if (enemy.type === 'meteor' || enemy.type === 'asteroid') {
                 const mAng = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-                const mSpd = MONSTER_DATA.meteor.speed;
+                const mSpd = enemy.type === 'meteor' ? MONSTER_DATA.meteor.speed : MONSTER_DATA.meteor.speed * 0.8;
                 enemy.velocity.x = Math.cos(mAng) * mSpd;
                 enemy.velocity.y = Math.sin(mAng) * mSpd;
             }
-            if (enemy.type !== 'ranged' && enemy.type !== 'meteor' && !MONSTER_DATA[enemy.type]?.isBoss && phantomClones.length > 0) {
+            if (enemy.type !== 'ranged' && enemy.type !== 'meteor' && enemy.type !== 'asteroid' && !MONSTER_DATA[enemy.type]?.isBoss && phantomClones.length > 0) {
                 for (let ci = 0; ci < phantomClones.length; ci++) {
                     const cl = phantomClones[ci];
                     if (Math.hypot(enemy.x - cl.x, enemy.y - cl.y) <= enemy.radius + cl.radius + 3) {
@@ -2602,10 +2746,15 @@ function animate() {
                 ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 8, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(255, 152, 0, 0.35)'; ctx.fill();
             }
+            if (enemy.type === 'asteroid') {
+                ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 6, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(121, 85, 72, 0.3)'; ctx.fill();
+            }
             ctx.beginPath();
             ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fillStyle = enemy.color; ctx.fill();
             if(enemy.type === 'final_boss') { ctx.lineWidth=2; ctx.strokeStyle='white'; ctx.stroke(); }
             if(enemy.type === 'meteor') { ctx.lineWidth=2; ctx.strokeStyle='#fff3e0'; ctx.stroke(); }
+            if(enemy.type === 'asteroid') { ctx.lineWidth=2; ctx.strokeStyle='#d7ccc8'; ctx.stroke(); }
             
             if (enemy.slowStacks > 0) { ctx.strokeStyle = 'rgba(0, 210, 255, 0.7)'; ctx.lineWidth = 2 + (enemy.slowStacks / 8); ctx.stroke(); }
             
@@ -2623,7 +2772,7 @@ function animate() {
 
             const distToPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
             if (distToPlayer - enemy.radius - player.radius < 1) {
-                let dmgToPlayer = enemy.type === 'meteor' ? maxHp * 0.2 : enemy.damage;
+                let dmgToPlayer = enemy.type === 'meteor' ? maxHp * 0.2 : (enemy.type === 'asteroid' ? maxHp * 0.4 : enemy.damage);
                 let isBlocked = false;
                 
                 if (s1Active && isShieldBlocking(enemy, myAimAngle)) isBlocked = true;
@@ -2640,7 +2789,7 @@ function animate() {
                 if (activeRelics.thorns && dmgToPlayer > 0) triggerThorns(dmgToPlayer);
                 
                 // 近戰怪造成傷害後判定死亡 (Kamikaze)
-                if (enemy.type === 'meteor' || (!MONSTER_DATA[enemy.type]?.isBoss && enemy.type !== 'ranged')) {
+                if (enemy.type === 'meteor' || enemy.type === 'asteroid' || (!MONSTER_DATA[enemy.type]?.isBoss && enemy.type !== 'ranged')) {
                     enemy.hp = 0;
                 }
 
@@ -2653,7 +2802,14 @@ function animate() {
         for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
             let bullet = bullets[bIndex];
             const distToBullet = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
-            if (distToBullet - enemy.radius - bullet.radius < 1) {
+            let isHit = false;
+            if (bullet.isSwordQi) {
+                if (!bullet.hitEnemyUids) bullet.hitEnemyUids = new Set();
+                isHit = swordQiHitsEnemy(bullet, enemy) && !bullet.hitEnemyUids.has(enemy.uid);
+            } else {
+                isHit = distToBullet - enemy.radius - bullet.radius < 1;
+            }
+            if (isHit) {
                 let hitDmg = bullet.damage;
                 if (activeRelics.giantSlayer && MONSTER_DATA[enemy.type]?.isBoss) hitDmg *= 3;
                 enemy.hp -= hitDmg;
@@ -2664,7 +2820,11 @@ function animate() {
                     triggerChainExplosion(bullet.x, bullet.y, blastRadius, baseBlastDmg, chains, new Set([enemy]));
                 }
                 
-                bullets.splice(bIndex, 1);
+                if (bullet.isSwordQi && bullet.pierce) {
+                    bullet.hitEnemyUids.add(enemy.uid);
+                } else {
+                    bullets.splice(bIndex, 1);
+                }
                 if (sessionStats.frostMagazineLevel > 0) { 
                     let maxStacks = 30 + (sessionStats.frostMagazineLevel * 10);
                     if (activeRelics.absoluteZero) maxStacks = 100;
@@ -2760,7 +2920,7 @@ function animate() {
         ctx.fillText(`⚠️ 流星來襲！${warnSec} 秒`, canvas.width / 2, 45);
         ctx.restore();
         if (meteorWarningTimer === 0 && !meteorSpawnedThisWave) {
-            spawnSpecificEnemy('meteor');
+            spawnMeteorWithExtras();
             meteorSpawnedThisWave = true;
         }
     }
@@ -2788,4 +2948,5 @@ if (currentUser) { loadGameData(); }
 </script>
 </body>
 </html>
+
 
