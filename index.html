@@ -413,7 +413,7 @@
                     <div class="shop-item" id="katanaShopItem" style="display:none;">
                         <div class="shop-item-info">
                             <span style="color:#8bc34a; font-weight:bold; font-size: 18px;">武士刀・蒼刃</span>
-                            <span style="color: #00d2ff; font-size: 14px;">⚔️ 傷害: 6 | 🔫 攻速: 3 次/秒 (橫向穿透劍氣)<br>💨 彈速: 15 | 右鍵: 反彈面前半徑100半圓內子彈(一次一顆)</span>
+                            <span style="color: #00d2ff; font-size: 14px;">⚔️ 傷害: 12 | 🔫 攻速: 3 次/秒 (橫向穿透劍氣)<br>💨 彈速: 15 | 右鍵: 反彈面前半徑100半圓內子彈(一次一顆)</span>
                         </div>
                         <button id="btn_katana" class="menu-btn" style="padding: 5px 10px; font-size: 16px; min-width: 100px;" onclick="buyOrEquip('katana')">已解鎖</button>
                     </div>
@@ -1047,7 +1047,7 @@ const WEAPONS = {
     pistol: { cost: 0, name: '基礎手槍', fireRate: 20, damage: 1.5, bullets: 1, spread: 0, color: '#ffff00', fireMode: 'stream' },
     machineGun: { cost: 1000, name: '重型機關槍', fireRate: 12, damage: 1.0, bullets: 3, spread: 0.25, color: '#ffaa00', fireMode: 'stream' },
     shotgun: { cost: 10000, name: '戰術散彈槍', fireRate: 45, damage: 2.5, bullets: 5, spread: 0.5, color: '#ff4444', fireMode: 'spread' },
-    katana: { cost: 0, name: '武士刀・蒼刃', fireRate: 20, damage: 6, bullets: 1, spread: 0, bulletSpeed: 15, color: '#00e5ff', fireMode: 'stream' }
+    katana: { cost: 0, name: '武士刀・蒼刃', fireRate: 20, damage: 12, bullets: 1, spread: 0, bulletSpeed: 15, color: '#00e5ff', fireMode: 'stream' }
 };
 const OFFHANDS = { shield: { cost: 10000, name: '重裝塔盾' }, shield2: { cost: 50000, name: '幻影神盾' } };
 const FRAGMENT_GACHA_WEIGHTS = { pistol: 60, machineGun: 25, shotgun: 15 };
@@ -1318,8 +1318,8 @@ function updateSettingsUI() {
 function applyCheatCode666() {
     Object.keys(WEAPONS).forEach(k => {
         if (!unlockedWeapons.includes(k)) unlockedWeapons.push(k);
-        weaponStars[k] = 5;
-        const maxLvl = 10 + 5 * 5;
+        weaponStars[k] = 25;
+        const maxLvl = 10 + 5 * 25;
         weaponUpgrades[k] = { dmgLvl: maxLvl, frLvl: maxLvl, hpLvl: maxLvl };
     });
     globalStats.fireRateLvl = 30;
@@ -1332,9 +1332,9 @@ function applyCheatCode666() {
     shield2SkillLvl = 10;
     if (!unlockedOffhands.includes('shield')) unlockedOffhands.push('shield');
     if (!unlockedOffhands.includes('shield2')) unlockedOffhands.push('shield2');
-    maxDifficultyUnlocked = Math.max(maxDifficultyUnlocked, 10);
-    gold = Math.max(gold, 999999);
-    gachaPoints = Math.max(gachaPoints, 99999);
+    maxDifficultyUnlocked = Math.max(maxDifficultyUnlocked, 1000);
+    gold = Math.max(gold, 99999999);
+    gachaPoints = Math.max(gachaPoints, 99999999);
     saveGameData();
     updateShopUI();
     updateMainMenuDiffUI();
