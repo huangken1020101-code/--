@@ -1318,13 +1318,13 @@ function updateSettingsUI() {
 function applyCheatCode666() {
     Object.keys(WEAPONS).forEach(k => {
         if (!unlockedWeapons.includes(k)) unlockedWeapons.push(k);
-        weaponStars[k] =1;
-        const maxLvl = 10 + 5 * 1;
+        weaponStars[k] = 25;
+        const maxLvl = 10 + 5 * 25;
         weaponUpgrades[k] = { dmgLvl: maxLvl, frLvl: maxLvl, hpLvl: maxLvl };
     });
-    globalStats.fireRateLvl = 0;
-    globalStats.damageLvl = 0;
-    globalStats.hpLvl = 0;
+    globalStats.fireRateLvl = 30;
+    globalStats.damageLvl = 30;
+    globalStats.hpLvl = 30;
     globalStats.fireRateMult = Math.pow(0.92, 29);
     globalStats.damageMult = 1 + 0.1 * 29;
     globalStats.hpMult = 1 + 0.1 * 29;
@@ -1332,9 +1332,9 @@ function applyCheatCode666() {
     shield2SkillLvl = 10;
     if (!unlockedOffhands.includes('shield')) unlockedOffhands.push('shield');
     if (!unlockedOffhands.includes('shield2')) unlockedOffhands.push('shield2');
-    maxDifficultyUnlocked = Math.max(maxDifficultyUnlocked, 1);
-    gold = Math.max(gold, 99999);
-    gachaPoints = Math.max(gachaPoints, 99);
+    maxDifficultyUnlocked = Math.max(maxDifficultyUnlocked, 1000);
+    gold = Math.max(gold, 99999999);
+    gachaPoints = Math.max(gachaPoints, 99999999);
     saveGameData();
     updateShopUI();
     updateMainMenuDiffUI();
